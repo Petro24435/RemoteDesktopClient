@@ -193,10 +193,15 @@ void OpenConsole() {
     std::ios_base::sync_with_stdio(false);
 }
 
+void pause_console() {
+    printf("Натисніть Enter для завершення...\n");
+    getchar();
+    getchar();
+}
 
 
 void connectToServer(const std::string& serverIp, int serverPort) {
-    OpenConsole(); // Консоль одразу
+    OpenConsole(); // Відкрити консоль
 
     WSADATA wsaData;
     int wsaResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -205,16 +210,17 @@ void connectToServer(const std::string& serverIp, int serverPort) {
         return;
     }
 
-    clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    SOCKET clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (clientSocket == INVALID_SOCKET) {
         MessageBox(NULL, L"Не вдалося створити сокет!", L"Помилка", MB_ICONERROR);
         WSACleanup();
         return;
     }
 
-    sockaddr_in serverAddr;
+    sockaddr_in serverAddr{};
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(serverPort);
+
     int result = inet_pton(AF_INET, serverIp.c_str(), &serverAddr.sin_addr);
     if (result <= 0) {
         MessageBox(NULL, L"Невірна IP-адреса сервера!", L"Помилка", MB_ICONERROR);
@@ -223,52 +229,46 @@ void connectToServer(const std::string& serverIp, int serverPort) {
         return;
     }
 
-    result = connect(clientSocket, (sockaddr*)&serverAddr, sizeof(serverAddr));
-    if (result == SOCKET_ERROR) {
+    if (connect(clientSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
         MessageBox(NULL, L"Не вдалося підключитися до сервера!", L"Помилка", MB_ICONERROR);
         closesocket(clientSocket);
         WSACleanup();
         return;
     }
 
-    MessageBox(NULL, L"Підключення до сервера успішне!", L"Успіх", MB_OK);
+    MessageBox(NULL, L"Підключено до сервера!", L"Успіх", MB_OK);
 
-    while (true) {
-        int n;
-        std::cout << "Введіть число (або 0 для виходу): ";
-        std::cin >> n;
+    int n;
+    std::cout << "Введіть розмір матриці n (n x n): ";
+    std::cin >> n;
 
-        if (n == 0) {
-            break;
-        }
+    // Відправляємо n у вигляді тексту, а не int!
+    std::string nStr = std::to_string(n);
 
-        int netN = htonl(n);
-        int sendResult = send(clientSocket, (char*)&netN, sizeof(netN), 0);
-        if (sendResult == SOCKET_ERROR) {
-            std::cout << "Помилка відправки даних: " << WSAGetLastError() << "\n";
-            break;
-        }
-
-        int netResult;
-        int recvResult = recv(clientSocket, (char*)&netResult, sizeof(netResult), 0);
-
-        if (recvResult == SOCKET_ERROR) {
-            std::cout << "Помилка отримання даних: " << WSAGetLastError() << "\n";
-            break;
-        }
-        else if (recvResult == 0) {
-            std::cout << "З'єднання з сервером було закрите.\n";
-            break;
-        }
-
-        int result = ntohl(netResult);
-        std::cout << "Відповідь від сервера: " << result << "\n";
+    if (send(clientSocket, nStr.c_str(), nStr.size(), 0) == SOCKET_ERROR) {
+        std::cout << "Помилка при відправленні даних: " << WSAGetLastError() << std::endl;
+        closesocket(clientSocket);
+        WSACleanup();
+        FreeConsole();
+        return;
     }
 
-    FreeConsole();
+    char buffer[4096];
+    int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
+    if (bytesReceived <= 0) {
+        std::cout << "Помилка при отриманні відповіді або сервер закрив з'єднання." << std::endl;
+    }
+    else {
+        buffer[bytesReceived] = '\0';
+        std::cout << "Отримано від сервера:\n" << buffer << std::endl;
+    }
+
     closesocket(clientSocket);
     WSACleanup();
+    FreeConsole();
 }
+
+
 
 
 // Функція для малювання елементів вкладки клієнта

@@ -73,48 +73,56 @@ std::string getLoginClientForPort(int targetPort) {
 }
 
 
-
 void handleClient(HWND hwnd, SOCKET clientSocket) {
     FILE* f;
     freopen_s(&f, "CONOUT$", "w", stdout);
 
     logMessage(hwnd, "Обробка клієнта...");
-    logMessage(hwnd, "Новий клієнт підключений!");
     setStatusColor(hwnd, 'y');
 
-    // Отримуємо loginClient з файлу за портом
-    std::string loginClient = getLoginClientForPort(port);
-
-    // Виводимо loginClient у вікно
-    SetWindowText(GetDlgItem(hwnd, 4006), std::wstring(loginClient.begin(), loginClient.end()).c_str());
-    MessageBox(hwnd, std::wstring(loginClient.begin(), loginClient.end()).c_str(), L"Успіх",MB_OK);
-
-    int n;
-    int bytesReceived = recv(clientSocket, (char*)&n, sizeof(n), 0);
+    // Читання розміру матриці
+    char buffer[64] = { 0 };
+    int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
     if (bytesReceived <= 0) {
-        std::cout << "Не вдалося прийняти число від клієнта!" << std::endl;
+        std::cout << "Помилка отримання даних від клієнта!" << std::endl;
         closesocket(clientSocket);
         return;
     }
 
-    n = ntohl(n); // <-- ОБОВ'ЯЗКОВО!!
+    int n = atoi(buffer); // Перетворюємо з тексту в число
+    std::cout << "Отримано n = " << n << std::endl;
 
-    std::cout << "Отримано число: " << n << std::endl;
+    if (n <= 0 || n > 1000) {
+        std::cout << "Некоректне значення n!" << std::endl;
+        closesocket(clientSocket);
+        return;
+    }
 
-    int result = n * n;
-    std::cout << "Результат обчислення n^2: " << result << std::endl;
+    // Формуємо матрицю
+    std::ostringstream matrixStream;
+    srand(time(NULL)); // Ініціалізуємо генератор випадкових чисел
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            int val = rand() % 100;
+            matrixStream << val << " ";
+        }
+        matrixStream << "\n";
+    }
 
-    int netResult = htonl(result); // <-- І ТУТ назад у мережевий порядок
-    int bytesSent = send(clientSocket, (char*)&netResult, sizeof(netResult), 0);
-    if (bytesSent == SOCKET_ERROR) {
-        std::cout << "Помилка при відправленні результату клієнту!" << std::endl;
+    std::string matrixStr = matrixStream.str();
+
+    // Відправляємо результат клієнту
+    int sendResult = send(clientSocket, matrixStr.c_str(), (int)matrixStr.size(), 0);
+    if (sendResult == SOCKET_ERROR) {
+        std::cout << "Помилка при відправленні матриці клієнту!" << std::endl;
     }
     else {
-        std::cout << "Результат успішно відправлено!" << std::endl;
+        std::cout << "Матриця успішно відправлена клієнту!" << std::endl;
     }
 
     closesocket(clientSocket);
 }
+
 
 
 
