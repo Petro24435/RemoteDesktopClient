@@ -13,6 +13,7 @@
 #include <cstdio>
 
 
+int p = 0;
 
 int port;
 extern UserInfo currentUser;

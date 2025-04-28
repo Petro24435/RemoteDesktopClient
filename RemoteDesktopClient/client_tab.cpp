@@ -169,22 +169,35 @@ LRESULT CALLBACK ClientTabWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     return 0;
 }
 void OpenConsole() {
-    AllocConsole();
+    if (AttachConsole(ATTACH_PARENT_PROCESS) == 0) {
+        AllocConsole();
+    }
 
     FILE* fp_out;
-    freopen_s(&fp_out, "CONOUT$", "w", stdout);
-    freopen_s(&fp_out, "CONOUT$", "w", stderr);
-    FILE* fp_in;
-    freopen_s(&fp_in, "CONIN$", "r", stdin);
+    if (freopen_s(&fp_out, "CONOUT$", "w", stdout) != 0) {
+        MessageBox(NULL, L"Не вдалося перенаправити stdout!", L"Помилка", MB_ICONERROR);
+    }
 
-    SetConsoleOutputCP(1251); // <-- тут змінено
-    SetConsoleCP(1251);       // <-- тут змінено
+    if (freopen_s(&fp_out, "CONOUT$", "w", stderr) != 0) {
+        MessageBox(NULL, L"Не вдалося перенаправити stderr!", L"Помилка", MB_ICONERROR);
+    }
+
+    FILE* fp_in;
+    if (freopen_s(&fp_in, "CONIN$", "r", stdin) != 0) {
+        MessageBox(NULL, L"Не вдалося перенаправити stdin!", L"Помилка", MB_ICONERROR);
+    }
+
+    SetConsoleOutputCP(1251);
+    SetConsoleCP(1251);
 
     std::ios_base::sync_with_stdio(false);
 }
 
 
+
 void connectToServer(const std::string& serverIp, int serverPort) {
+    OpenConsole(); // Консоль одразу
+
     WSADATA wsaData;
     int wsaResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (wsaResult != 0) {
@@ -210,7 +223,6 @@ void connectToServer(const std::string& serverIp, int serverPort) {
         return;
     }
 
-    // Підключення до сервера
     result = connect(clientSocket, (sockaddr*)&serverAddr, sizeof(serverAddr));
     if (result == SOCKET_ERROR) {
         MessageBox(NULL, L"Не вдалося підключитися до сервера!", L"Помилка", MB_ICONERROR);
@@ -221,9 +233,6 @@ void connectToServer(const std::string& serverIp, int serverPort) {
 
     MessageBox(NULL, L"Підключення до сервера успішне!", L"Успіх", MB_OK);
 
-    // --- ТУТ ДОДАЄМО КОНСОЛЬНУ ВЗАЄМОДІЮ ---
-    OpenConsole(); // Створюємо консольне вікно
-
     while (true) {
         int n;
         std::cout << "Введіть число (або 0 для виходу): ";
@@ -233,9 +242,7 @@ void connectToServer(const std::string& serverIp, int serverPort) {
             break;
         }
 
-        int netN = htonl(n); // Перетворення в мережевий порядок байтів
-
-        // Відправка числа на сервер
+        int netN = htonl(n);
         int sendResult = send(clientSocket, (char*)&netN, sizeof(netN), 0);
         if (sendResult == SOCKET_ERROR) {
             std::cout << "Помилка відправки даних: " << WSAGetLastError() << "\n";
@@ -253,23 +260,14 @@ void connectToServer(const std::string& serverIp, int serverPort) {
             std::cout << "З'єднання з сервером було закрите.\n";
             break;
         }
-        int g = 0;
-        int ggg = 0;
-        int g5 = 0;
-        int result = ntohl(netResult); // Перетворення результату з мережевого порядку байтів
+
+        int result = ntohl(netResult);
         std::cout << "Відповідь від сервера: " << result << "\n";
     }
 
-
-    // --- КІНЕЦЬ ВЗАЄМОДІЇ ---
-
-    // Закриваємо консоль
     FreeConsole();
-
-    // Закриваємо сокет після роботи
     closesocket(clientSocket);
     WSACleanup();
-
 }
 
 
