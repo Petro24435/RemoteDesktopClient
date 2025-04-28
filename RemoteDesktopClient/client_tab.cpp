@@ -201,31 +201,6 @@ void pause_console() {
 
 
 
-// Функція для безпечного отримання всіх байтів
-bool recvAll(SOCKET socket, char* buffer, int totalBytes) {
-    int bytesReceived = 0;
-    while (bytesReceived < totalBytes) {
-        int result = recv(socket, buffer + bytesReceived, totalBytes - bytesReceived, 0);
-        if (result <= 0) {
-            return false; // Помилка або закриття з'єднання
-        }
-        bytesReceived += result;
-    }
-    return true;
-}
-
-// Функція для безпечного надсилання всіх байтів
-bool sendAll(SOCKET socket, const char* data, int totalBytes) {
-    int bytesSent = 0;
-    while (bytesSent < totalBytes) {
-        int result = send(socket, data + bytesSent, totalBytes - bytesSent, 0);
-        if (result == SOCKET_ERROR) {
-            return false;
-        }
-        bytesSent += result;
-    }
-    return true;
-}
 
 void connectToServer(const std::string& serverIp, int serverPort) {
     OpenConsole(); // Відкрити консоль

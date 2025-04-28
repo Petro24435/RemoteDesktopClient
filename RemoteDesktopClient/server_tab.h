@@ -14,6 +14,8 @@ static WCHAR bufferKey[256];
 extern UserInfo currentUser;
 static COLORREF currentStatusColor;
 void setStatusColor(HWND hwnd, char c);
+bool sendAll(SOCKET socket, const char* data, int totalBytes);
+bool recvAll(SOCKET socket, char* buffer, int totalBytes);
 
 void DrawServerTab(HWND hwnd);  											// Створює вкладку
 void InitServerTab(HWND hwnd); 												// Ініціалізація DrawST і обробника подій 

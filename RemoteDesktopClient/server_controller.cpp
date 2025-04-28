@@ -74,6 +74,7 @@ std::string getLoginClientForPort(int targetPort) {
 
 
 // Функція для безпечного отримання всіх байтів
+
 bool recvAll(SOCKET socket, char* buffer, int totalBytes) {
     int bytesReceived = 0;
     while (bytesReceived < totalBytes) {
