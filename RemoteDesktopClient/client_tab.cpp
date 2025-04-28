@@ -253,7 +253,8 @@ void connectToServer(const std::string& serverIp, int serverPort) {
             std::cout << "З'єднання з сервером було закрите.\n";
             break;
         }
-
+        int g = 0;
+        int ggg = 0;
         int result = ntohl(netResult); // Перетворення результату з мережевого порядку байтів
         std::cout << "Відповідь від сервера: " << result << "\n";
     }
