@@ -139,6 +139,7 @@ LRESULT CALLBACK ServerTabWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
             GetDlgItemText(hwnd, 4004, bufferPort, sizeof(bufferPort) / sizeof(WCHAR));
             // ќтримуЇмо текст з 4005 ≥ передаЇмо в 3001
             GetDlgItemText(hwnd, 4005, bufferKey, sizeof(bufferKey) / sizeof(WCHAR));
+            disconnectClient(hwnd, port);
             break;
 
 

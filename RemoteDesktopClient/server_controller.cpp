@@ -7,8 +7,10 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <map>
 
 #pragma comment(lib, "ws2_32.lib")  // Лінкуємо бібліотеку Winsock
+std::map<int, SOCKET> activeClients; // ключ — порт сервера, значення — клієнтський сокет
 
 SOCKET serverSocket;
 bool serverRunning = false;  // Флаг для перевірки, чи сервер вже запущений
@@ -178,6 +180,7 @@ bool initializeServer(HWND hwnd, const std::string& serverIp, int serverPort) {
     sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(serverPort);
+    serverAddr.sin_addr.s_addr = INADDR_ANY;
     int result = inet_pton(AF_INET, serverIp.c_str(), &serverAddr.sin_addr);
     if (result <= 0) {
         logMessage(hwnd, "Невірна IP-адреса!");
@@ -230,13 +233,25 @@ void serverThreadFunction(HWND hwnd, std::string serverLogin, int serverPort, st
 
     while (serverRunning) {
         clientSocket = accept(serverSocket, (struct sockaddr*)&clientAddr, &clientAddrSize);
-        if (clientSocket == INVALID_SOCKET) {
-            continue;
+        if (clientSocket != INVALID_SOCKET) {
+            // Додаємо клієнта в активні клієнти
+            activeClients[serverPort] = clientSocket;
+            logMessage(hwnd, "Новий клієнт підключився до порту " + std::to_string(serverPort));
+
+            // Далі вже обробка логіну, наприклад:
+            char loginBuffer[256] = { 0 };
+            int bytesReceived = recv(clientSocket, loginBuffer, sizeof(loginBuffer) - 1, 0);
+            if (bytesReceived > 0) {
+                loginBuffer[bytesReceived] = '\0';
+                std::string clientLogin = loginBuffer;
+                SetWindowTextA(GetDlgItem(hwnd, 4006), clientLogin.c_str());
+            }
+
+            // Створення окремого потоку на обробку
+            std::thread clientThread(handleClient, hwnd, clientSocket);
+            clientThread.detach();
         }
 
-        // Обробка клієнта в окремому потоці
-        std::thread clientThread(handleClient, hwnd, clientSocket);
-        clientThread.detach();
     }
 
     // Завершення роботи сервера
@@ -268,10 +283,7 @@ void addConnection(HWND hwnd, const std::string& serverLogin, int serverPort, co
     }
 }
 
-// Видалення з'єднання
 void removeConnection(HWND hwnd, const std::string& serverLogin, int serverPort) {
-
-
     std::ifstream infile("C:/opencv/active_connections.csv");
     std::ofstream outfile("C:/opencv/active_connections_tmp.csv");
 
@@ -290,14 +302,20 @@ void removeConnection(HWND hwnd, const std::string& serverLogin, int serverPort)
 
         if (login == serverLogin && std::stoi(portStr) == serverPort) {
             connectionFound = true;
-            serverRunning = false;
-            // Якщо є активний клієнт, його роз'єднуємо
-            if (client != "-") {
-                logMessage(hwnd, "Клієнт з IP " + clientIp + " відключений від сервера.");
-                // Закрити сокет клієнта, якщо необхідно
+
+            if (serverRunning) {
+                serverRunning = false;
+
+                if (serverSocket != INVALID_SOCKET) {
+                    closesocket(serverSocket);
+                    serverSocket = INVALID_SOCKET;
+                }
+
+                WSACleanup();
+                logMessage(hwnd, "Сервер закрито для порту " + std::to_string(serverPort));
             }
 
-            // Пропускаємо цей рядок, оскільки з'єднання має бути видалене
+            // Пропускаємо цей рядок, бо видаляємо з'єднання
             continue;
         }
 
@@ -307,7 +325,6 @@ void removeConnection(HWND hwnd, const std::string& serverLogin, int serverPort)
     infile.close();
     outfile.close();
 
-    // Якщо було знайдено з'єднання, замінюємо файл
     if (connectionFound) {
         std::remove("C:/opencv/active_connections.csv");
         std::rename("C:/opencv/active_connections_tmp.csv", "C:/opencv/active_connections.csv");
@@ -316,6 +333,7 @@ void removeConnection(HWND hwnd, const std::string& serverLogin, int serverPort)
         logMessage(hwnd, "З'єднання не знайдено для видалення.");
     }
 }
+
 
 
 // Оновлюємо з'єднання: додаємо клієнта тільки за портом
@@ -363,13 +381,13 @@ void updateConnection(HWND hwnd, int serverPort, const std::string& clientLogin,
     std::rename("C:/opencv/active_connections_tmp.csv", "C:/opencv/active_connections.csv");
 }
 
-
-// Вихід тільки клієнта (обнулити clientLogin на "-")
 void disconnectClient(HWND hwnd, int serverPort) {
     std::ifstream infile("C:/opencv/active_connections.csv");
     std::ofstream outfile("C:/opencv/active_connections_tmp.csv");
 
     std::string line;
+    bool clientFound = false;
+
     while (std::getline(infile, line)) {
         std::istringstream iss(line);
         std::string login, portStr, key, serverIp, client, clientIp;
@@ -381,6 +399,9 @@ void disconnectClient(HWND hwnd, int serverPort) {
         std::getline(iss, clientIp, ',');
 
         if (std::stoi(portStr) == serverPort) {
+            clientFound = true;
+
+            // Обнуляємо дані клієнта
             outfile << login << "," << portStr << "," << key << "," << serverIp << ",-" << ",-" << std::endl;
         }
         else {
@@ -393,7 +414,21 @@ void disconnectClient(HWND hwnd, int serverPort) {
 
     std::remove("C:/opencv/active_connections.csv");
     std::rename("C:/opencv/active_connections_tmp.csv", "C:/opencv/active_connections.csv");
+
+    // Якщо був знайдений активний клієнт — закриваємо його сокет
+    if (clientFound) {
+        auto it = activeClients.find(serverPort);
+        if (it != activeClients.end()) {
+            closesocket(it->second);
+            activeClients.erase(it);
+            logMessage(hwnd, "Клієнтський сокет для порту " + std::to_string(serverPort) + " закрито.");
+        }
+        else {
+            logMessage(hwnd, "Не знайдено активного клієнта для порту " + std::to_string(serverPort));
+        }
+    }
 }
+
 
 
 

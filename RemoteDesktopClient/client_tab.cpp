@@ -222,6 +222,7 @@ void connectToServer(const std::string& serverIp, int serverPort) {
     sockaddr_in serverAddr{};
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(serverPort);
+    serverAddr.sin_addr.s_addr = INADDR_ANY;
 
     int result = inet_pton(AF_INET, serverIp.c_str(), &serverAddr.sin_addr);
     if (result <= 0) {
@@ -239,7 +240,7 @@ void connectToServer(const std::string& serverIp, int serverPort) {
     }
 
     MessageBox(NULL, L"Підключено до сервера!", L"Успіх", MB_OK);
-
+    send(clientSocket, currentUser.login.c_str(), currentUser.login.size(), 0);
     int n;
     std::cout << "Введіть розмір матриці n (n x n): ";
     std::cin >> n;

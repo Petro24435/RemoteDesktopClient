@@ -8,6 +8,7 @@
 #include "user.h"
 #include <cstdio>
 #include <set>
+
 extern int port;
 static WCHAR bufferPort[256];
 static WCHAR bufferKey[256];
@@ -16,6 +17,7 @@ static COLORREF currentStatusColor;
 void setStatusColor(HWND hwnd, char c);
 bool sendAll(SOCKET socket, const char* data, int totalBytes);
 bool recvAll(SOCKET socket, char* buffer, int totalBytes);
+
 
 void DrawServerTab(HWND hwnd);  											// Створює вкладку
 void InitServerTab(HWND hwnd); 												// Ініціалізація DrawST і обробника подій 
