@@ -255,6 +255,7 @@ void connectToServer(const std::string& serverIp, int serverPort) {
         }
         int g = 0;
         int ggg = 0;
+        int g5 = 0;
         int result = ntohl(netResult); // Перетворення результату з мережевого порядку байтів
         std::cout << "Відповідь від сервера: " << result << "\n";
     }
