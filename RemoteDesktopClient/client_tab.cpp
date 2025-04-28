@@ -200,6 +200,33 @@ void pause_console() {
 }
 
 
+
+// Функція для безпечного отримання всіх байтів
+bool recvAll(SOCKET socket, char* buffer, int totalBytes) {
+    int bytesReceived = 0;
+    while (bytesReceived < totalBytes) {
+        int result = recv(socket, buffer + bytesReceived, totalBytes - bytesReceived, 0);
+        if (result <= 0) {
+            return false; // Помилка або закриття з'єднання
+        }
+        bytesReceived += result;
+    }
+    return true;
+}
+
+// Функція для безпечного надсилання всіх байтів
+bool sendAll(SOCKET socket, const char* data, int totalBytes) {
+    int bytesSent = 0;
+    while (bytesSent < totalBytes) {
+        int result = send(socket, data + bytesSent, totalBytes - bytesSent, 0);
+        if (result == SOCKET_ERROR) {
+            return false;
+        }
+        bytesSent += result;
+    }
+    return true;
+}
+
 void connectToServer(const std::string& serverIp, int serverPort) {
     OpenConsole(); // Відкрити консоль
 
@@ -242,21 +269,31 @@ void connectToServer(const std::string& serverIp, int serverPort) {
     std::cout << "Введіть розмір матриці n (n x n): ";
     std::cin >> n;
 
-    // Відправляємо n у вигляді тексту, а не int!
-    std::string nStr = std::to_string(n);
-
-    if (send(clientSocket, nStr.c_str(), nStr.size(), 0) == SOCKET_ERROR) {
-        std::cout << "Помилка при відправленні даних: " << WSAGetLastError() << std::endl;
+    // Відправляємо n як розмір (4 байти у мережевому порядку)
+    int netLength = htonl(n);
+    if (!sendAll(clientSocket, (char*)&netLength, sizeof(netLength))) {
+        std::cout << "Помилка при відправленні розміру матриці!" << std::endl;
         closesocket(clientSocket);
         WSACleanup();
         FreeConsole();
         return;
     }
 
+    // Тепер чекаємо на отримання матриці
+    int netMessageLength = 0;
+    if (!recvAll(clientSocket, (char*)&netMessageLength, sizeof(netMessageLength))) {
+        std::cout << "Помилка при отриманні довжини матриці!" << std::endl;
+        closesocket(clientSocket);
+        WSACleanup();
+        FreeConsole();
+        return;
+    }
+    int messageLength = ntohl(netMessageLength);
+
     char buffer[4096];
-    int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
+    int bytesReceived = recvAll(clientSocket, buffer, messageLength);
     if (bytesReceived <= 0) {
-        std::cout << "Помилка при отриманні відповіді або сервер закрив з'єднання." << std::endl;
+        std::cout << "Помилка при отриманні матриці або сервер закрив з'єднання." << std::endl;
     }
     else {
         buffer[bytesReceived] = '\0';
@@ -267,6 +304,7 @@ void connectToServer(const std::string& serverIp, int serverPort) {
     WSACleanup();
     FreeConsole();
 }
+
 
 
 
