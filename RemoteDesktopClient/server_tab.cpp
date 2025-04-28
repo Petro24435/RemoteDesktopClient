@@ -226,7 +226,7 @@ void savePortsToCSV(const std::set<int>& ports, const std::string& filename) {
 // Отримати випадковий вільний порт
 int getRandomFreePort() {
     std::set<int> usedPorts = getUsedPorts();
-    savePortsToCSV(usedPorts, "used_ports.csv");
+    savePortsToCSV(usedPorts, "C:/opencv/used_ports.csv");
 
     std::vector<int> freePorts;
     for (int port = 1000; port <= 9999; ++port) {
@@ -336,7 +336,7 @@ void loadCSVFile(const std::string& filePath) {
 }
 // Функція для оновлення таблиці портів
 void updatePortsTable(const std::string& newPort) {
-    std::ofstream file("used_ports.csv", std::ios::app); // Відкрити у режимі дозапису
+    std::ofstream file("C:/opencv/used_ports.csv", std::ios::app); // Відкрити у режимі дозапису
     if (!file.is_open()) {
         MessageBox(NULL, L"Не вдалося відкрити файл для портів", L"Помилка", MB_ICONERROR);
         return;
@@ -347,7 +347,7 @@ void updatePortsTable(const std::string& newPort) {
 
 
 void updateKeysTable(const std::string& newKey) {
-    std::ofstream file("keys.csv", std::ios::app); // Відкрити у режимі дозапису
+    std::ofstream file("C:/opencv/keys.csv", std::ios::app); // Відкрити у режимі дозапису
     if (!file.is_open()) {
         MessageBox(NULL, L"Не вдалося відкрити файл для ключів", L"Помилка", MB_ICONERROR);
         return;

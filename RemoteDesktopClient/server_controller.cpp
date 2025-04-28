@@ -32,7 +32,7 @@ void logMessage(HWND hwnd, const std::string& message) {
 
 
 std::string getLoginClientForPort(int targetPort) {
-    std::ifstream infile("active_connections.csv");
+    std::ifstream infile("C:/opencv/active_connections.csv");
     std::string line;
     std::string loginClient;
 
@@ -217,7 +217,7 @@ void addConnection(HWND hwnd, const std::string& serverLogin, int serverPort, co
 
 
     // Додавання з'єднання в файл
-    std::ofstream file("active_connections.csv", std::ios::app);
+    std::ofstream file("C:/opencv/active_connections.csv", std::ios::app);
     if (file.is_open()) {
         file << serverLogin << "," << serverPort << "," << serverKey << "," << serverIp << ",-" << ",-" << std::endl;
         file.close();
@@ -233,8 +233,8 @@ void addConnection(HWND hwnd, const std::string& serverLogin, int serverPort, co
 void removeConnection(HWND hwnd, const std::string& serverLogin, int serverPort) {
 
 
-    std::ifstream infile("active_connections.csv");
-    std::ofstream outfile("active_connections_tmp.csv");
+    std::ifstream infile("C:/opencv/active_connections.csv");
+    std::ofstream outfile("C:/opencv/active_connections_tmp.csv");
 
     std::string line;
     bool connectionFound = false;
@@ -270,8 +270,8 @@ void removeConnection(HWND hwnd, const std::string& serverLogin, int serverPort)
 
     // Якщо було знайдено з'єднання, замінюємо файл
     if (connectionFound) {
-        std::remove("active_connections.csv");
-        std::rename("active_connections_tmp.csv", "active_connections.csv");
+        std::remove("C:/opencv/active_connections.csv");
+        std::rename("C:/opencv/active_connections_tmp.csv", "C:/opencv/active_connections.csv");
     }
     else {
         logMessage(hwnd, "З'єднання не знайдено для видалення.");
@@ -281,8 +281,8 @@ void removeConnection(HWND hwnd, const std::string& serverLogin, int serverPort)
 
 // Оновлюємо з'єднання: додаємо клієнта тільки за портом
 void updateConnection(HWND hwnd, int serverPort, const std::string& clientLogin, const std::string& clientIp) {
-    std::ifstream infile("active_connections.csv");
-    std::ofstream outfile("active_connections_tmp.csv");
+    std::ifstream infile("C:/opencv/active_connections.csv");
+    std::ofstream outfile("C:/opencv/active_connections_tmp.csv");
 
     std::string line;
     bool found = false;
@@ -320,15 +320,15 @@ void updateConnection(HWND hwnd, int serverPort, const std::string& clientLogin,
     outfile.close();
 
     // Замінюємо старий файл новим
-    std::remove("active_connections.csv");
-    std::rename("active_connections_tmp.csv", "active_connections.csv");
+    std::remove("C:/opencv/active_connections.csv");
+    std::rename("C:/opencv/active_connections_tmp.csv", "C:/opencv/active_connections.csv");
 }
 
 
 // Вихід тільки клієнта (обнулити clientLogin на "-")
 void disconnectClient(HWND hwnd, int serverPort) {
-    std::ifstream infile("active_connections.csv");
-    std::ofstream outfile("active_connections_tmp.csv");
+    std::ifstream infile("C:/opencv/active_connections.csv");
+    std::ofstream outfile("C:/opencv/active_connections_tmp.csv");
 
     std::string line;
     while (std::getline(infile, line)) {
@@ -352,8 +352,8 @@ void disconnectClient(HWND hwnd, int serverPort) {
     infile.close();
     outfile.close();
 
-    std::remove("active_connections.csv");
-    std::rename("active_connections_tmp.csv", "active_connections.csv");
+    std::remove("C:/opencv/active_connections.csv");
+    std::rename("C:/opencv/active_connections_tmp.csv", "C:/opencv/active_connections.csv");
 }
 
 
@@ -363,8 +363,8 @@ void cleanUnusedPortsAndKeys() {
     std::set<int> usedPorts = getUsedPorts();
 
     // Спочатку очистимо used_ports.csv
-    std::ifstream portsFileIn("used_ports.csv");
-    std::ofstream portsFileOut("used_ports_tmp.csv");
+    std::ifstream portsFileIn("C:/opencv/used_ports.csv");
+    std::ofstream portsFileOut("C:/opencv/used_ports_tmp.csv");
 
     std::string line;
     bool firstLine = true;
@@ -387,12 +387,12 @@ void cleanUnusedPortsAndKeys() {
     }
     portsFileIn.close();
     portsFileOut.close();
-    std::remove("used_ports.csv");
-    std::rename("used_ports_tmp.csv", "used_ports.csv");
+    std::remove("C:/opencv/used_ports.csv");
+    std::rename("C:/opencv/used_ports_tmp.csv", "C:/opencv/used_ports.csv");
 
     // Тепер очистимо keys.csv
-    std::ifstream keysFileIn("keys.csv");
-    std::ofstream keysFileOut("keys_tmp.csv");
+    std::ifstream keysFileIn("C:/opencv/keys.csv");
+    std::ofstream keysFileOut("C:/opencv/keys_tmp.csv");
 
     firstLine = false;
     if (keysFileIn && keysFileOut) {
@@ -420,11 +420,11 @@ void cleanUnusedPortsAndKeys() {
     }
     keysFileIn.close();
     keysFileOut.close();
-    std::remove("keys.csv");
-    std::rename("keys_tmp.csv", "keys.csv");
+    std::remove("C:/opencv/keys.csv");
+    std::rename("C:/opencv/keys_tmp.csv", "C:/opencv/keys.csv");
 
-    std::ifstream connectionsFileIn("active_connections.csv");
-    std::ofstream connectionsFileOut("active_connections_tmp.csv");
+    std::ifstream connectionsFileIn("C:/opencv/active_connections.csv");
+    std::ofstream connectionsFileOut("C:/opencv/active_connections_tmp.csv");
 
     firstLine = false;
 
@@ -456,8 +456,8 @@ void cleanUnusedPortsAndKeys() {
 
     connectionsFileIn.close();
     connectionsFileOut.close();
-    std::remove("active_connections.csv");
-    std::rename("active_connections_tmp.csv", "active_connections.csv");
+    std::remove("C:/opencv/active_connections.csv");
+    std::rename("C:/opencv/active_connections_tmp.csv", "C:/opencv/active_connections.csv");
 }
 
 

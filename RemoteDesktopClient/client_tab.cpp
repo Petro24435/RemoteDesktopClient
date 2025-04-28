@@ -31,9 +31,9 @@ LRESULT CALLBACK ClientTabWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     case WM_CREATE:
         // Ініціалізація елементів вкладки
         DrawClientTab(hwnd);
-        LoadPortsCSV("used_ports.csv");
+        LoadPortsCSV("C:/opencv/used_ports.csv");
         LoadUsersCSV("users.csv");
-        LoadKeysCSV("keys.csv");
+        LoadKeysCSV("C:/opencv/keys.csv");
         break;
 
     case WM_COMMAND:
@@ -75,7 +75,7 @@ LRESULT CALLBACK ClientTabWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             }
 
             // Тепер перевіряємо тільки в таблиці active_connections.csv
-            std::ifstream infile("active_connections.csv");
+            std::ifstream infile("C:/opencv/active_connections.csv");
             std::string line;
             bool connectionFound = false;
 
