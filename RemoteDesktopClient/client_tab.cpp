@@ -242,21 +242,31 @@ void connectToServer(const std::string& serverIp, int serverPort) {
     std::cout << "Введіть розмір матриці n (n x n): ";
     std::cin >> n;
 
-    // Відправляємо n у вигляді тексту, а не int!
-    std::string nStr = std::to_string(n);
-
-    if (send(clientSocket, nStr.c_str(), nStr.size(), 0) == SOCKET_ERROR) {
-        std::cout << "Помилка при відправленні даних: " << WSAGetLastError() << std::endl;
+    // Відправляємо n як розмір (4 байти у мережевому порядку)
+    int netLength = htonl(n);
+    if (!sendAll(clientSocket, (char*)&netLength, sizeof(netLength))) {
+        std::cout << "Помилка при відправленні розміру матриці!" << std::endl;
         closesocket(clientSocket);
         WSACleanup();
         FreeConsole();
         return;
     }
 
+    // Тепер чекаємо на отримання матриці
+    int netMessageLength = 0;
+    if (!recvAll(clientSocket, (char*)&netMessageLength, sizeof(netMessageLength))) {
+        std::cout << "Помилка при отриманні довжини матриці!" << std::endl;
+        closesocket(clientSocket);
+        WSACleanup();
+        FreeConsole();
+        return;
+    }
+    int messageLength = ntohl(netMessageLength);
+
     char buffer[4096];
-    int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
+    int bytesReceived = recvAll(clientSocket, buffer, messageLength);
     if (bytesReceived <= 0) {
-        std::cout << "Помилка при отриманні відповіді або сервер закрив з'єднання." << std::endl;
+        std::cout << "Помилка при отриманні матриці або сервер закрив з'єднання." << std::endl;
     }
     else {
         buffer[bytesReceived] = '\0';
@@ -267,6 +277,7 @@ void connectToServer(const std::string& serverIp, int serverPort) {
     WSACleanup();
     FreeConsole();
 }
+
 
 
 
