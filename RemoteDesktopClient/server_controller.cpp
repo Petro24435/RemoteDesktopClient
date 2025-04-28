@@ -110,16 +110,13 @@ void handleClient(HWND hwnd, SOCKET clientSocket) {
     // Читання розміру матриці (4 байти для збереження довжини)
     int netLength = 0;
     if (!recvAll(clientSocket, (char*)&netLength, sizeof(netLength))) {
-        std::cout << "Помилка отримання розміру від клієнта!" << std::endl;
         closesocket(clientSocket);
         return;
     }
     int n = ntohl(netLength); // Перетворення з мережевого формату в локальний
 
-    std::cout << "Отримано n = " << n << std::endl;
 
     if (n <= 0 || n > 1000) {
-        std::cout << "Некоректне значення n!" << std::endl;
         closesocket(clientSocket);
         return;
     }
@@ -141,17 +138,16 @@ void handleClient(HWND hwnd, SOCKET clientSocket) {
     int messageLength = matrixStr.size();
     int netMessageLength = htonl(messageLength); // Перетворюємо довжину в мережевий формат
     if (!sendAll(clientSocket, (char*)&netMessageLength, sizeof(netMessageLength))) {
-        std::cout << "Помилка при відправленні довжини матриці!" << std::endl;
         closesocket(clientSocket);
         return;
     }
 
     // Надсилаємо саму матрицю
     if (!sendAll(clientSocket, matrixStr.c_str(), messageLength)) {
-        std::cout << "Помилка при відправленні матриці клієнту!" << std::endl;
+        //std::cout << "Помилка при відправленні матриці клієнту!" << std::endl;
     }
     else {
-        std::cout << "Матриця успішно відправлена клієнту!" << std::endl;
+        //std::cout << "Матриця успішно відправлена клієнту!" << std::endl;
     }
 
     closesocket(clientSocket);
