@@ -342,7 +342,7 @@ void cleanUnusedPortsAndKeys() {
     // Отримати всі зайняті порти
     std::set<int> usedPorts = getUsedPorts();
 
-    std::string url = globalConfig.GetBaseUrl() + "/clean/";
+    std::string url = globalConfig.GetBaseUrl() + "/clean_unused_connections/";
     std::ostringstream oss;
     oss << "{\"usedPorts\":[";
 
