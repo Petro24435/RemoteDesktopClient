@@ -19,7 +19,7 @@ int port;
 extern UserInfo currentUser;
 static HWND hKeyEdit;
 static HWND hPortEdit;
-
+void savePortsToCSV(const std::set<int>& ports, const std::string& filename);
 // Функція для малювання елементів вкладки Server
 void DrawServerTab(HWND hwnd) {
     std::wstring wip(currentUser.ip.begin(), currentUser.ip.end());
@@ -119,8 +119,7 @@ LRESULT CALLBACK ServerTabWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
             std::wstring wkey(keyBuffer);
             std::string newKey(wkey.begin(), wkey.end());
 
-            updatePortsTable(newPort);
-            updateKeysTable(newKey);
+            savePortsToCSV(getUsedPorts(), "C:/opencv/used_ports.csv");
             addConnection(hwnd, currentUser.login, port, newKey, currentUser.ip);
             //SetWindowText(GetDlgItem(hwnd, 4009), L"Помилка при підключенні!");4006
             setStatusColor(hwnd, RGB(255, 255, 0)); // Жовтий
@@ -129,6 +128,7 @@ LRESULT CALLBACK ServerTabWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
         }
         case 4008:
             cleanUnusedPortsAndKeys();
+            
             removeConnection(hwnd, currentUser.login, port);
             MessageBox(hwnd, L"Закрито з'єднання і очищено таблиці", L"Успіх", MB_OK);
             break;
@@ -304,58 +304,6 @@ std::string generateKey(const std::string& ip, const std::string& login, int por
     return keyStream.str();
 }
 
-// Функція для завантаження CSV файлу з Dropbox
-/*void downloadCSVFromDropbox(const std::string& dropboxFilePath) {
-    // Тут буде код для доступу до Dropbox API та завантаження CSV
-    // Це можна зробити через HTTP запити або з використанням Dropbox SDK
-
-    // Для початку, завантажуємо файл через API (відповідно до Dropbox API)
-    std::string downloadURL = "https://www.dropbox.com/scl/fi/zead1zv18sj13uurkxdmq/used_ports.csv?rlkey=jffef5xy61c4v6ozhblcapd9d&st=fnql71bz&dl=0";
-    std::string token = "vcfyyrxwlspqebt"; // Токен доступу, який ти отримаєш через Dropbox API
-
-    // Виконання HTTP запиту для завантаження файлу
-    // Тут треба використовувати відповідні бібліотеки або інструменти для HTTP запитів, наприклад, cURL або WinINet
-    // Можна зробити це через POST-запит для отримання файлу на основі Dropbox API
-    //std::cout << "Downloading CSV from Dropbox: " << dropboxFilePath << std::endl;
-}*/
-
-void loadCSVFile(const std::string& filePath) {
-    std::ifstream file(filePath);
-    if (!file.is_open()) {
-        MessageBox(NULL, L"Не вдалося відкрити файл", L"Помилка", MB_ICONERROR);
-        return;
-    }
-
-    std::string line;
-    while (std::getline(file, line)) {
-        // Тут можна парсити CSV рядки
-        // Наприклад вивести:
-        // std::cout << "Рядок: " << line << std::endl;
-    }
-
-    file.close();
-}
-// Функція для оновлення таблиці портів
-void updatePortsTable(const std::string& newPort) {
-    std::ofstream file("C:/opencv/used_ports.csv", std::ios::app); // Відкрити у режимі дозапису
-    if (!file.is_open()) {
-        MessageBox(NULL, L"Не вдалося відкрити файл для портів", L"Помилка", MB_ICONERROR);
-        return;
-    }
-    file << newPort << "\n";
-    file.close();
-}
-
-
-void updateKeysTable(const std::string& newKey) {
-    std::ofstream file("C:/opencv/keys.csv", std::ios::app); // Відкрити у режимі дозапису
-    if (!file.is_open()) {
-        MessageBox(NULL, L"Не вдалося відкрити файл для ключів", L"Помилка", MB_ICONERROR);
-        return;
-    }
-    file << newKey << "\n";
-    file.close();
-}
 
 // Оновлюємо колір
 void setStatusColor(HWND hwnd, char c) {

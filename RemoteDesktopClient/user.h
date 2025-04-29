@@ -9,3 +9,5 @@ struct UserInfo {
 };
 
 extern UserInfo currentUser;
+
+

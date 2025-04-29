@@ -8,19 +8,48 @@
 #include <sstream>
 #include <string>
 #include <map>
+#include <curl/curl.h>
 
 #pragma comment(lib, "ws2_32.lib")  // Лінкуємо бібліотеку Winsock
 std::map<int, SOCKET> activeClients; // ключ — порт сервера, значення — клієнтський сокет
+#include "serverUserRegistration.h"
 
 SOCKET serverSocket;
 bool serverRunning = false;  // Флаг для перевірки, чи сервер вже запущений
 
+
+
+size_t WriteCallbackController(void* contents, size_t size, size_t nmemb, std::string* output) {
+    size_t totalSize = size * nmemb;
+    output->append((char*)contents, totalSize);
+    return totalSize;
+}
+
+bool PostJson(const std::string& url, const std::string& jsonData, std::string& response) {
+    CURL* curl = curl_easy_init();
+    if (!curl) return false;
+
+    struct curl_slist* headers = nullptr;
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsonData.c_str());
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallbackController);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+
+    CURLcode res = curl_easy_perform(curl);
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+
+    return (res == CURLE_OK);
+}
 void logMessage(HWND hwnd, const std::string& message) {
-    std::ofstream logFile("server_log.txt", std::ios::app);
-    if (logFile.is_open()) {
-        logFile << message << std::endl;
-        logFile.close();
-    }
+    //std::ofstream logFile("server_log.txt", std::ios::app);
+    //if (logFile.is_open()) {
+    //    logFile << message << std::endl;
+    //    logFile.close();
+    //}
     if (hwnd != NULL) {
         HWND hStatusEdit = GetDlgItem(hwnd, 4009);
         if (hStatusEdit) {
@@ -31,49 +60,6 @@ void logMessage(HWND hwnd, const std::string& message) {
         }
     }
 }
-
-
-std::string getLoginClientForPort(int targetPort) {
-    std::ifstream infile("C:/opencv/active_connections.csv");
-    std::string line;
-    std::string loginClient;
-
-    // Перевірка, чи файл відкритий
-    if (!infile.is_open()) {
-        std::cerr << "Не вдалося відкрити файл!" << std::endl;
-        return "das";
-    }
-
-    // Пропускаємо заголовок
-    std::getline(infile, line);
-
-    // Читання кожного рядка
-    while (std::getline(infile, line)) {
-        std::stringstream ss(line);
-        std::string loginServer, portStr, key, serverIp, loginClientFromFile, clientIp;
-
-        // Розбиваємо рядок на частини, використовуючи кому як роздільник
-        std::getline(ss, loginServer, ',');
-        std::getline(ss, portStr, ',');
-        std::getline(ss, key, ',');
-        std::getline(ss, serverIp, ',');
-        std::getline(ss, loginClientFromFile, ',');
-        std::getline(ss, clientIp, ',');
-
-        // Перетворюємо ціле число на рядок
-        std::string targetPortStr = std::to_string(targetPort);
-
-        // Перевіряємо, чи рядок з порту у файлі співпадає з targetPort
-        if (portStr == targetPortStr) {
-            loginClient = loginClientFromFile; // Зберігаємо loginClient, якщо порт співпадає
-            break;  // Можна вийти з циклу, оскільки ми знайшли відповідний запис
-        }
-    }
-
-    infile.close();
-    return loginClient;  // Повертаємо loginClient або порожній рядок, якщо нічого не знайдено
-}
-
 
 // Функція для безпечного отримання всіх байтів
 
@@ -260,278 +246,118 @@ void serverThreadFunction(HWND hwnd, std::string serverLogin, int serverPort, st
     serverRunning = false;
 }
 
-// Додавання з'єднання до списку активних з'єднань
 void addConnection(HWND hwnd, const std::string& serverLogin, int serverPort, const std::string& serverKey, const std::string& serverIp) {
-    // Перевірка на наявність помилок в параметрах (ключ, IP, порт)
-    if (serverIp.empty() || /*serverLogin.empty() ||*/ serverKey.empty()) {
+    if (serverIp.empty() || serverKey.empty()) {
         logMessage(hwnd, "Некоректні параметри для з'єднання!");
         return;
     }
 
+    std::string url = globalConfig.GetBaseUrl() + "/add_connection/";
+    std::string jsonData =
+        "{\"serverLogin\":\"" + serverLogin +
+        "\",\"port\":" + std::to_string(serverPort) +
+        ",\"serverKey\":\"" + serverKey +
+        "\",\"serverIp\":\"" + serverIp + "\"}";
 
-
-    // Додавання з'єднання в файл
-    std::ofstream file("C:/opencv/active_connections.csv", std::ios::app);
-    if (file.is_open()) {
-        file << serverLogin << "," << serverPort << "," << serverKey << "," << serverIp << ",-" << ",-" << std::endl;
-        file.close();
+    std::string response;
+    if (!PostJson(url, jsonData, response)) {
+        logMessage(hwnd, "Помилка при запиті на /add_connection/");
+        return;
     }
 
-    // Якщо сервер ще не запущений, запускаємо його
     if (!serverRunning) {
         std::thread(serverThreadFunction, hwnd, serverLogin, serverPort, serverKey, serverIp).detach();
     }
 }
 
+
 void removeConnection(HWND hwnd, const std::string& serverLogin, int serverPort) {
-    std::ifstream infile("C:/opencv/active_connections.csv");
-    std::ofstream outfile("C:/opencv/active_connections_tmp.csv");
+    std::string url = globalConfig.GetBaseUrl() + "/remove_connection/";
+    std::string jsonData =
+        "{\"serverLogin\":\"" + serverLogin +
+        "\",\"port\":" + std::to_string(serverPort) + "}";
 
-    std::string line;
-    bool connectionFound = false;
+    std::string response;
+    if (!PostJson(url, jsonData, response)) {
+        logMessage(hwnd, "Помилка при видаленні з'єднання");
+        return;
+    }
 
-    while (std::getline(infile, line)) {
-        std::istringstream iss(line);
-        std::string login, portStr, key, serverIp, client, clientIp;
-        std::getline(iss, login, ',');
-        std::getline(iss, portStr, ',');
-        std::getline(iss, key, ',');
-        std::getline(iss, serverIp, ',');
-        std::getline(iss, client, ',');
-        std::getline(iss, clientIp, ',');
-
-        if (login == serverLogin && std::stoi(portStr) == serverPort) {
-            connectionFound = true;
-
-            if (serverRunning) {
-                serverRunning = false;
-
-                if (serverSocket != INVALID_SOCKET) {
-                    closesocket(serverSocket);
-                    serverSocket = INVALID_SOCKET;
-                }
-
-                WSACleanup();
-                logMessage(hwnd, "Сервер закрито для порту " + std::to_string(serverPort));
-            }
-
-            // Пропускаємо цей рядок, бо видаляємо з'єднання
-            continue;
+    if (serverRunning) {
+        serverRunning = false;
+        if (serverSocket != INVALID_SOCKET) {
+            closesocket(serverSocket);
+            serverSocket = INVALID_SOCKET;
         }
-
-        outfile << line << std::endl;
-    }
-
-    infile.close();
-    outfile.close();
-
-    if (connectionFound) {
-        std::remove("C:/opencv/active_connections.csv");
-        std::rename("C:/opencv/active_connections_tmp.csv", "C:/opencv/active_connections.csv");
-    }
-    else {
-        logMessage(hwnd, "З'єднання не знайдено для видалення.");
+        WSACleanup();
+        logMessage(hwnd, "Сервер закрито для порту " + std::to_string(serverPort));
     }
 }
+
 
 
 
 // Оновлюємо з'єднання: додаємо клієнта тільки за портом
 void updateConnection(HWND hwnd, int serverPort, const std::string& clientLogin, const std::string& clientIp) {
-    std::ifstream infile("C:/opencv/active_connections.csv");
-    std::ofstream outfile("C:/opencv/active_connections_tmp.csv");
+    std::string url = globalConfig.GetBaseUrl() + "/update_connection/";
+    std::string jsonData =
+        "{\"port\":" + std::to_string(serverPort) +
+        ",\"clientLogin\":\"" + clientLogin +
+        "\",\"clientIp\":\"" + clientIp + "\"}";
 
-    std::string line;
-    bool found = false;
-    std::string serverLogin, serverIp;
-
-    while (std::getline(infile, line)) {
-        std::istringstream iss(line);
-        std::string login, portStr, key, serverIpInFile, client, clientIpOld;
-        std::getline(iss, login, ',');
-        std::getline(iss, portStr, ',');
-        std::getline(iss, key, ',');
-        std::getline(iss, serverIpInFile, ',');
-        std::getline(iss, client, ',');
-        std::getline(iss, clientIpOld, ',');
-
-        if (std::stoi(portStr) == serverPort) {
-            // Якщо знайшли запис для цього порту, оновлюємо його
-            outfile << login << "," << portStr << "," << key << "," << serverIpInFile << ","
-                << clientLogin << "," << clientIp << std::endl;
-            found = true;
-        }
-        else {
-            // Якщо запис не для цього порту, зберігаємо його без змін
-            outfile << line << std::endl;
-        }
+    std::string response;
+    if (!PostJson(url, jsonData, response)) {
+        logMessage(hwnd, "Помилка при оновленні з'єднання");
+        return;
     }
-
-    if (!found) {
-        // Якщо не знайшли запису для порту, додаємо новий
-        outfile << clientLogin << "," << serverPort << ",-, " << "0.0.0.0" << ","
-            << clientLogin << "," << clientIp << std::endl;
-    }
-
-    infile.close();
-    outfile.close();
-
-    // Замінюємо старий файл новим
-    std::remove("C:/opencv/active_connections.csv");
-    std::rename("C:/opencv/active_connections_tmp.csv", "C:/opencv/active_connections.csv");
 }
 
 void disconnectClient(HWND hwnd, int serverPort) {
-    std::ifstream infile("C:/opencv/active_connections.csv");
-    std::ofstream outfile("C:/opencv/active_connections_tmp.csv");
+    std::string url = globalConfig.GetBaseUrl() + "/disconnect_client/";
+    std::string jsonData = "{\"port\":" + std::to_string(serverPort) + "}";
 
-    std::string line;
-    bool clientFound = false;
-
-    while (std::getline(infile, line)) {
-        std::istringstream iss(line);
-        std::string login, portStr, key, serverIp, client, clientIp;
-        std::getline(iss, login, ',');
-        std::getline(iss, portStr, ',');
-        std::getline(iss, key, ',');
-        std::getline(iss, serverIp, ',');
-        std::getline(iss, client, ',');
-        std::getline(iss, clientIp, ',');
-
-        if (std::stoi(portStr) == serverPort) {
-            clientFound = true;
-
-            // Обнуляємо дані клієнта
-            outfile << login << "," << portStr << "," << key << "," << serverIp << ",-" << ",-" << std::endl;
-        }
-        else {
-            outfile << line << std::endl;
-        }
+    std::string response;
+    if (!PostJson(url, jsonData, response)) {
+        logMessage(hwnd, "Помилка при розриві з'єднання з клієнтом");
+        return;
     }
 
-    infile.close();
-    outfile.close();
-
-    std::remove("C:/opencv/active_connections.csv");
-    std::rename("C:/opencv/active_connections_tmp.csv", "C:/opencv/active_connections.csv");
-
-    // Якщо був знайдений активний клієнт — закриваємо його сокет
-    if (clientFound) {
-        auto it = activeClients.find(serverPort);
-        if (it != activeClients.end()) {
-            closesocket(it->second);
-            activeClients.erase(it);
-            logMessage(hwnd, "Клієнтський сокет для порту " + std::to_string(serverPort) + " закрито.");
-        }
-        else {
-            logMessage(hwnd, "Не знайдено активного клієнта для порту " + std::to_string(serverPort));
-        }
+    auto it = activeClients.find(serverPort);
+    if (it != activeClients.end()) {
+        closesocket(it->second);
+        activeClients.erase(it);
+        logMessage(hwnd, "Клієнтський сокет для порту " + std::to_string(serverPort) + " закрито.");
+    }
+    else {
+        logMessage(hwnd, "Не знайдено активного клієнта для порту " + std::to_string(serverPort));
     }
 }
+
 
 
 
 
 void cleanUnusedPortsAndKeys() {
+
     // Отримати всі зайняті порти
     std::set<int> usedPorts = getUsedPorts();
 
-    // Спочатку очистимо used_ports.csv
-    std::ifstream portsFileIn("C:/opencv/used_ports.csv");
-    std::ofstream portsFileOut("C:/opencv/used_ports_tmp.csv");
+    std::string url = globalConfig.GetBaseUrl() + "/clean/";
+    std::ostringstream oss;
+    oss << "{\"usedPorts\":[";
 
-    std::string line;
-    bool firstLine = true;
-    if (portsFileIn && portsFileOut) {
-        while (std::getline(portsFileIn, line)) {
-            if (firstLine) {
-                portsFileOut << line << "\n"; // Копіюємо заголовок
-                firstLine = false;
-                continue;
-            }
-            if (line.empty()) continue;
-            try {
-                int port = std::stoi(line);
-                if (usedPorts.find(port) != usedPorts.end()) {
-                    portsFileOut << port << "\n"; // Якщо порт все ще зайнятий — зберігаємо
-                }
-            }
-            catch (...) {}
-        }
+    bool first = true;
+    for (int port : usedPorts) {
+        if (!first) oss << ",";
+        oss << port;
+        first = false;
     }
-    portsFileIn.close();
-    portsFileOut.close();
-    std::remove("C:/opencv/used_ports.csv");
-    std::rename("C:/opencv/used_ports_tmp.csv", "C:/opencv/used_ports.csv");
+    oss << "]}";
 
-    // Тепер очистимо keys.csv
-    std::ifstream keysFileIn("C:/opencv/keys.csv");
-    std::ofstream keysFileOut("C:/opencv/keys_tmp.csv");
-
-    firstLine = false;
-    if (keysFileIn && keysFileOut) {
-        while (std::getline(keysFileIn, line)) {
-            if (firstLine) {
-                keysFileOut << line << "\n"; // Копіюємо заголовок
-                firstLine = false;
-                continue;
-            }
-            if (line.empty()) continue;
-
-            // Розбираємо рядок (ключ,порт)
-            std::istringstream iss(line);
-            std::string key, portStr;
-            if (std::getline(iss, key, ',') && std::getline(iss, portStr)) {
-                try {
-                    int port = std::stoi(portStr);
-                    if (usedPorts.find(port) != usedPorts.end()) {
-                        keysFileOut << key << "," << port << "\n"; // Якщо порт зайнятий — зберігаємо
-                    }
-                }
-                catch (...) {}
-            }
-        }
+    std::string response;
+    if (!PostJson(url, oss.str(), response)) {
+        std::cerr << "Помилка при очищенні з'єднань" << std::endl;
     }
-    keysFileIn.close();
-    keysFileOut.close();
-    std::remove("C:/opencv/keys.csv");
-    std::rename("C:/opencv/keys_tmp.csv", "C:/opencv/keys.csv");
-
-    std::ifstream connectionsFileIn("C:/opencv/active_connections.csv");
-    std::ofstream connectionsFileOut("C:/opencv/active_connections_tmp.csv");
-
-    firstLine = false;
-
-    if (connectionsFileIn && connectionsFileOut) {
-        while (std::getline(connectionsFileIn, line)) {
-            if (firstLine) {
-                connectionsFileOut << line << "\n"; // Копіюємо заголовок
-                firstLine = false;
-                continue;
-            }
-            if (line.empty()) continue;
-
-            // Розбираємо рядок (login,port,key)
-            std::istringstream iss(line);
-            std::string login, portStr, key;
-            if (std::getline(iss, login, ',') && std::getline(iss, portStr, ',') && std::getline(iss, key)) {
-                try {
-                    int port = std::stoi(portStr);
-                    if (usedPorts.find(port) != usedPorts.end()) {
-                        connectionsFileOut << login << "," << port << "," << key << "\n"; // Якщо порт зайнятий — зберігаємо
-                    }
-                }
-                catch (...) {
-                    // Ігноруємо рядки з некоректними даними
-                }
-            }
-        }
-    }
-
-    connectionsFileIn.close();
-    connectionsFileOut.close();
-    std::remove("C:/opencv/active_connections.csv");
-    std::rename("C:/opencv/active_connections_tmp.csv", "C:/opencv/active_connections.csv");
 }
 
 

@@ -144,8 +144,10 @@
     <ClCompile Include="mainmenu.cpp" />
     <ClCompile Include="profile_tab.cpp" />
     <ClCompile Include="RemoteDesktopClient.cpp" />
+    <ClCompile Include="serverUserRegistration.cpp" />
     <ClCompile Include="server_controller.cpp" />
     <ClCompile Include="server_tab.cpp" />
+    <ClCompile Include="sqlite3.c" />
     <ClCompile Include="user.h" />
   </ItemGroup>
   <ItemGroup>
@@ -154,7 +156,9 @@
     <ClInclude Include="friends_tab.h" />
     <ClInclude Include="mainmenu.h" />
     <ClInclude Include="profile_tab.h" />
+    <ClInclude Include="serverUserRegistration.h" />
     <ClInclude Include="server_tab.h" />
+    <ClInclude Include="sqlite3.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

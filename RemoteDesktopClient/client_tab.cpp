@@ -11,18 +11,14 @@
 #include <cctype>
 #include <thread>
 #pragma comment(lib, "Ws2_32.lib")
+#include "serverUserRegistration.h"
 
-std::unordered_set<int> usedPorts;
-std::unordered_map<std::string, std::string> usersTable;
-std::unordered_set<std::string> keysTable;
+
 
 ClientTabData clientTabData;
 
 SOCKET clientSocket = INVALID_SOCKET; // Для з'єднання з сервером
 
-bool LoadPortsCSV(const std::string& filename);
-bool LoadUsersCSV(const std::string& filename);
-bool LoadKeysCSV(const std::string& filename);
 bool decodeKey(const std::string& key, std::string& ipOut, std::string& loginOut, int port);
 void connectToServer(const std::string& serverIp, int serverPort);
 // Обробник подій вкладки клієнта
@@ -31,9 +27,6 @@ LRESULT CALLBACK ClientTabWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     case WM_CREATE:
         // Ініціалізація елементів вкладки
         DrawClientTab(hwnd);
-        LoadPortsCSV("C:/opencv/used_ports.csv");
-        LoadUsersCSV("users.csv");
-        LoadKeysCSV("C:/opencv/keys.csv");
         break;
 
     case WM_COMMAND:
@@ -46,11 +39,10 @@ LRESULT CALLBACK ClientTabWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             std::wstring wsKey(wKey), wsLogin(wLogin), wsPort(wPort);
             std::string key(wsKey.begin(), wsKey.end());
             std::string login(wsLogin.begin(), wsLogin.end());
-            wchar_t buffer[16]; // до 5 цифр + запас
+            wchar_t buffer[16];
             GetWindowText(GetDlgItem(hwnd, 3003), buffer, 16);
-            port = wcstol(buffer, NULL, 10); // або wcstol(buffer, NULL, 10)
+            int port = wcstol(buffer, NULL, 10);
 
-            // Перевірка на заповненість хоча б двох полів
             int filledFields = 0;
             if (!key.empty()) filledFields++;
             if (!login.empty()) filledFields++;
@@ -58,68 +50,52 @@ LRESULT CALLBACK ClientTabWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 
             if (filledFields < 2) {
                 MessageBox(hwnd, L"Потрібно заповнити хоча б два поля (ключ, логін або порт)!", L"Помилка", MB_ICONERROR);
-                break;
+                return 0;
             }
 
-            // Декодування ключа
             std::string ip, decodedLogin;
             if (!decodeKey(key, ip, decodedLogin, port)) {
                 MessageBox(hwnd, L"Невірний ключ!", L"Помилка", MB_ICONERROR);
-                break;
+                return 0;
             }
 
-            // Перевірка, що логін і порт відповідають розкодуваним
             if (decodedLogin != login) {
                 MessageBox(hwnd, L"Логін не збігається з ключем!", L"Помилка", MB_ICONERROR);
-                break;
+                return 0;
             }
 
-            // Тепер перевіряємо тільки в таблиці active_connections.csv
-            std::ifstream infile("C:/opencv/active_connections.csv");
-            std::string line;
-            bool connectionFound = false;
+            //// Перевірка наявності з'єднання через FastAPI
+            //std::string url = globalConfig.GetBaseUrl() + "/check_connection/";
+            //std::string checkJson =
+            //    "{\"serverLogin\":\"" + login +
+            //    "\",\"port\":" + std::to_string(port) +
+            //    ",\"serverKey\":\"" + key + "\"}";
 
-            while (std::getline(infile, line)) {
-                std::istringstream iss(line);
-                std::string fileLogin, filePortStr, fileKey, fileIp, client, clientIp;
-                std::getline(iss, fileLogin, ',');
-                std::getline(iss, filePortStr, ',');
-                std::getline(iss, fileKey, ',');
-                std::getline(iss, fileIp, ',');
-                std::getline(iss, client, ',');
-                std::getline(iss, clientIp, ',');
+            //std::string checkResponse;
+            //if (!PostJson(url, checkJson, checkResponse) || checkResponse != "true") {
+            //    MessageBox(hwnd, L"З'єднання не знайдено в базі!", L"Помилка", MB_ICONERROR);
+            //    return 0;
+            //}
 
-                int filePort = std::stoi(filePortStr);
+            MessageBox(hwnd, L"Підключення успішне!", L"OK", MB_OK);
 
-                // Перевірка, чи логін, порт і ключ збігаються
-                if (fileLogin == login && filePort == port && fileKey == key) {
-                    connectionFound = true;
-                    break;  // Якщо знайшли відповідне з'єднання, виходимо з циклу
-                }
-            }
+            // Оновлення з'єднання — додавання клієнта
+            std::thread([=]() {
+                std::string updateUrl = globalConfig.GetBaseUrl() + "/update_connection/";
+                std::string updateJson =
+                    "{\"port\":" + std::to_string(port) +
+                    ",\"clientLogin\":\"" + login +
+                    "\",\"clientIp\":\"" + currentUser.ip + "\"}";
 
-            infile.close();
+                std::string updateResponse;
+                PostJson(updateUrl, updateJson, updateResponse);
+                }).detach();
 
-            // Якщо знайдено з'єднання
-            if (connectionFound) {
-                // Успішне підключення
-                MessageBox(hwnd, L"Підключення успішне!", L"OK", MB_OK);
-                
-
-                // Оновлюємо з'єднання для активного клієнта, використовуючи тільки порт
-                updateConnection(hwnd, port, login, currentUser.ip); // У цьому випадку login може бути отримано через ключ або інші методи
-
-                // Ініціація з'єднання з сервером
-                std::thread connectThread(connectToServer, ip, port);
-                connectThread.detach();
-            }
-
-
-            else {
-                // Якщо з'єднання не знайдено
-                MessageBox(hwnd, L"З'єднання не знайдено в таблиці активних з'єднань!", L"Помилка", MB_ICONERROR);
-            }
+                // Запуск з’єднання з сервером
+                std::thread(connectToServer, ip, port).detach();
         }
+
+
         else if (LOWORD(wp) == 3005) // Кнопка "Від'єднатись"
         {
             // Перевіряємо, чи є активне з'єднання
@@ -360,67 +336,3 @@ bool decodeKey(const std::string& key, std::string& ipOut, std::string& loginOut
     return true;
 }
 
-// --- Зчитування портів ---
-// (Тимчасово збережено для контексту вашого питання, в разі потреби можна це включити в додаткову функціональність)
-bool LoadPortsCSV(const std::string& filename) {
-    std::ifstream file(filename);
-    if (!file.is_open()) return false;
-
-    usedPorts.clear();
-    std::string line;
-    std::getline(file, line); // Пропускаємо заголовок
-
-    while (std::getline(file, line)) {
-        if (!line.empty()) {
-            try {
-                int port = std::stoi(line);
-                usedPorts.insert(port);
-            }
-            catch (...) {}
-        }
-    }
-
-    return true;
-}
-
-// --- Зчитування користувачів ---
-// (Тимчасово збережено для контексту вашого питання)
-bool LoadUsersCSV(const std::string& filename) {
-    std::ifstream file(filename);
-    if (!file.is_open()) return false;
-
-    usersTable.clear();
-    std::string line;
-    std::getline(file, line); // Пропускаємо заголовок
-
-    while (std::getline(file, line)) {
-        std::stringstream ss(line);
-        std::string login, password;
-
-        std::getline(ss, login, ',');
-        std::getline(ss, password, ',');
-
-        // Пропускаємо порожні або числові логіни
-        if (!login.empty() && std::isalpha(login[0])) {
-            usersTable[login] = password;
-        }
-    }
-
-    return true;
-}
-
-// --- Зчитування ключів ---
-// (Тимчасово збережено для контексту вашого питання)
-bool LoadKeysCSV(const std::string& filename) {
-    std::ifstream file(filename);
-    if (!file.is_open()) return false;
-
-    keysTable.clear();
-    std::string line;
-    while (std::getline(file, line)) {
-        if (!line.empty())
-            keysTable.insert(line);
-    }
-
-    return true;
-}

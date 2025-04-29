@@ -1,3 +1,4 @@
+#include "serverUserRegistration.h"
 #include "auth.h"
 #include "mainmenu.h"
 #include <windows.h>
@@ -7,7 +8,6 @@
 
 HINSTANCE hInst;
 Auth auth; // Додаємо змінну для перевірки статусу логіну
-
 //// Обробка повідомлень для головного вікна
 //LRESULT CALLBACK WndProcMainMenu(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 //    switch (msg) {

@@ -1,138 +1,133 @@
+#include "serverUserRegistration.h"
 #include "auth.h"
-#include <fstream>
-#include <sstream>
 #include <iostream>
-#include <vector>
-
-
-bool Auth::Authenticate(const std::string& username, const std::string& password) {
-    std::ifstream file("users.csv");
-    if (!file.is_open()) {
-        std::cerr << "Failed to open the CSV file!" << std::endl;
-        return false;
-    }
-
-    std::string line;
-    while (std::getline(file, line)) {
-        std::stringstream ss(line);
-        std::string storedUsername, storedPassword;
-
-        std::getline(ss, storedUsername, ',');
-        std::getline(ss, storedPassword, ',');
-
-        if (username == storedUsername && password == storedPassword) {
-            return true;
-        }
-    }
-
-    return false;
-}
+#include <curl/curl.h>
+// Ініціалізація глобальної змінної
+ServerConfig globalConfig;
 
 bool Auth::RegisterUser(const std::string& username, const std::string& password) {
-    std::ifstream file("users.csv");
-    if (file.is_open()) {
-        std::string line;
-        while (std::getline(file, line)) {
-            std::stringstream ss(line);
-            std::string storedUsername;
-            std::getline(ss, storedUsername, ',');
-
-            if (username == storedUsername) {
-                return false; // Користувач уже існує
-            }
-        }
-        file.close();
-    }
-
-    std::ofstream outFile("users.csv", std::ios::app);
-    if (!outFile.is_open()) {
-        std::cerr << "Failed to open the CSV file for writing!" << std::endl;
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        std::cerr << "CURL init failed!" << std::endl;
         return false;
     }
 
-    outFile << username << "," << password << std::endl;
+    std::string url = globalConfig.GetBaseUrl() + "/add_user/";
+    std::string json_data = "{\"login\": \"" + username + "\", \"pass\": \"" + password + "\"}";
+
+    std::string response_string;
+    struct curl_slist* headers = curl_slist_append(nullptr, "Content-Type: application/json");
+
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_POST, 1L);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_data.c_str());
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_string);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5L);
+
+    CURLcode res = curl_easy_perform(curl);
+
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+
+    if (res != CURLE_OK) {
+        std::cerr << "CURL request failed: " << curl_easy_strerror(res) << std::endl;
+        return false;
+    }
+
+    if (response_string.find("error") != std::string::npos) {
+        std::cerr << "Server error: " << response_string << std::endl;
+        return false;
+    }
+
     return true;
+}
+
+bool Auth::Authenticate(const std::string& username, const std::string& password) {
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        std::cerr << "CURL init failed!" << std::endl;
+        return false;
+    }
+
+    std::string url = globalConfig.GetBaseUrl() + "/get_user/?login=" + username;
+
+    std::string response_string;
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_string);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5L);
+
+    CURLcode res = curl_easy_perform(curl);
+    curl_easy_cleanup(curl);
+
+    if (res != CURLE_OK) {
+        std::cerr << "CURL request failed: " << curl_easy_strerror(res) << std::endl;
+        return false;
+    }
+
+    // Очікується, що сервер повертає JSON з паролем, напр.: {"pass": "1234"}
+    size_t pos = response_string.find("\"pass\":");
+    if (pos == std::string::npos) {
+        std::cerr << "Invalid response or user not found: " << response_string << std::endl;
+        return false;
+    }
+
+    std::string returned_pass = response_string.substr(pos + 8);
+    returned_pass = returned_pass.substr(0, returned_pass.find('"'));
+
+    return returned_pass == password;
 }
 
 bool Auth::ChangeName(const std::string& oldUsername, const std::string& password, const std::string& newUsername) {
-    std::ifstream file("users.csv");
-    if (!file.is_open()) {
-        std::cerr << "Не вдалося відкрити файл для читання!" << std::endl;
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        std::cerr << "CURL init failed!" << std::endl;
         return false;
     }
 
-    std::vector<std::pair<std::string, std::string>> users;
-    std::string line;
-    bool found = false;
+    std::string url = globalConfig.GetBaseUrl() + "/change_user_name/";
+    std::string json_data = "{\"oldUsername\": \"" + oldUsername + "\", \"newUsername\": \"" + newUsername + "\"}";
 
-    while (std::getline(file, line)) {
-        std::stringstream ss(line);
-        std::string username, pass;
-        std::getline(ss, username, ',');
-        std::getline(ss, pass, ',');
+    struct curl_slist* headers = curl_slist_append(nullptr, "Content-Type: application/json");
 
-        if (username == oldUsername && pass == password) {
-            users.emplace_back(newUsername, pass); // Змінюємо ім’я
-            found = true;
-        }
-        else if (username == newUsername) {
-            std::cerr << "Користувач із таким новим іменем вже існує!" << std::endl;
-            return false;
-        }
-        else {
-            users.emplace_back(username, pass);
-        }
-    }
-    file.close();
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_data.c_str());
+    curl_easy_setopt(curl, CURLOPT_POST, 1L);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5L);
 
-    if (!found) {
-        std::cerr << "Старе ім’я користувача або пароль невірні!" << std::endl;
-        return false;
-    }
+    CURLcode res = curl_easy_perform(curl);
 
-    std::ofstream outFile("users.csv", std::ios::trunc);
-    if (!outFile.is_open()) {
-        std::cerr << "Не вдалося відкрити файл для запису!" << std::endl;
-        return false;
-    }
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
 
-    for (const auto& user : users) {
-        outFile << user.first << "," << user.second << "\n";
-    }
-
-    return true;
+    return (res == CURLE_OK);
 }
 
-
 bool Auth::ChangePassword(const std::string& username, const std::string& oldPassword, const std::string& newPassword) {
-    std::ifstream file("users.csv");
-    if (!file.is_open()) return false;
-
-    std::vector<std::pair<std::string, std::string>> users;
-    bool found = false;
-
-    std::string line;
-    while (std::getline(file, line)) {
-        std::stringstream ss(line);
-        std::string uname, pass;
-        std::getline(ss, uname, ',');
-        std::getline(ss, pass);
-
-        if (uname == username && pass == oldPassword) {
-            users.emplace_back(uname, newPassword);
-            found = true;
-        }
-        else {
-            users.emplace_back(uname, pass);
-        }
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        std::cerr << "CURL init failed!" << std::endl;
+        return false;
     }
-    file.close();
 
-    if (!found) return false;
+    std::string url = globalConfig.GetBaseUrl() + "/change_password/";
+    std::string json_data = "{\"username\": \"" + username + "\", \"oldPassword\": \"" + oldPassword + "\", \"newPassword\": \"" + newPassword + "\"}";
 
-    std::ofstream outFile("users.csv", std::ios::trunc);
-    for (const auto& user : users) {
-        outFile << user.first << "," << user.second << "\n";
-    }
-    return true;
+    struct curl_slist* headers = curl_slist_append(nullptr, "Content-Type: application/json");
+
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_data.c_str());
+    curl_easy_setopt(curl, CURLOPT_POST, 1L);
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5L);
+
+    CURLcode res = curl_easy_perform(curl);
+
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+
+    return (res == CURLE_OK);
 }
