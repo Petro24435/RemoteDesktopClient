@@ -1,8 +1,8 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include <winsock2.h>
+#include <ws2tcpip.h>
 #include <windows.h>
 #include <string>
-#include <ws2tcpip.h>
 #include "auth.h"
 #include "user.h"
 #pragma comment(lib, "ws2_32.lib")

@@ -1,8 +1,8 @@
 #ifndef SERVER_TAB_H
 #define SERVER_TAB_H
 #include <winsock2.h>  // Спочатку підключаємо winsock2.h
-#include <windows.h>
 #include <ws2tcpip.h>  // Для InetPton
+#include <windows.h>
 #include <thread>  // Для роботи з потоками
 #include <string>
 #include "user.h"

@@ -2,6 +2,8 @@
 #define AUTH_H
 
 #include <string>
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <windows.h>
 LRESULT CALLBACK WndProcLogin(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 extern bool loginSuccessful;

@@ -1,6 +1,8 @@
 #ifndef PROFILE_TAB_H
 #define PROFILE_TAB_H
 
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <windows.h>
 #include <string>
 #include "user.h"

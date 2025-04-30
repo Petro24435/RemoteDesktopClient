@@ -1,7 +1,8 @@
-#include "serverUserRegistration.h"
-#include "auth.h"
+
 #include <iostream>
 #include <curl/curl.h>
+#include "serverUserRegistration.h"
+#include "auth.h"
 // Ініціалізація глобальної змінної
 ServerConfig globalConfig;
 

@@ -1,6 +1,8 @@
 #ifndef MAINMENU_H
 #define MAINMENU_H
 
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <windows.h>
 
 // Функція для додавання вкладок

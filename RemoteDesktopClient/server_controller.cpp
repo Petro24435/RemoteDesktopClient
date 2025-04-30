@@ -1,3 +1,5 @@
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <fstream>
 #include <sstream>
 #include <cstdio>  // для std::remove і std::rename
@@ -7,10 +9,9 @@
 #include <string>
 #include <map>
 #include <curl/curl.h>
-#include <winsock2.h>
+
 #include <windows.h>
 #include <opencv2/opencv.hpp>
-#include <ws2tcpip.h>
 #include <vector>
 #include <unordered_map>
 #include <thread>

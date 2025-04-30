@@ -1,6 +1,8 @@
 #ifndef FRIENDS_TAB_H
 #define FRIENDS_TAB_H
 
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <windows.h>
 #include <string>      // Для std::wstring
 #include <vector>      // Для std::vector

@@ -1,6 +1,5 @@
 #define _CRT_SECURE_NO_WARNINGS
-#include "client_tab.h"
-#include "server_tab.h"
+
 #include <vector>
 #include <string>
 #include <unordered_map>
@@ -12,6 +11,8 @@
 #include <thread>
 #include <opencv2/opencv.hpp>
 #include "serverUserRegistration.h"
+#include "client_tab.h"
+#include "server_tab.h"
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "User32.lib")
 
