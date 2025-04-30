@@ -137,6 +137,7 @@
   <ItemGroup>
     <ClCompile Include="auth.cpp" />
     <ClCompile Include="change_pass.cpp" />
+    <ClCompile Include="client_controller.cpp" />
     <ClCompile Include="client_tab.cpp" />
     <ClCompile Include="friends_tab.cpp" />
     <ClCompile Include="gui.cpp" />

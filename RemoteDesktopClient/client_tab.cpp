@@ -10,9 +10,10 @@
 #include <string>
 #include <cctype>
 #include <thread>
-#pragma comment(lib, "Ws2_32.lib")
+#include <opencv2/opencv.hpp>
 #include "serverUserRegistration.h"
-
+#pragma comment(lib, "ws2_32.lib")
+#pragma comment(lib, "User32.lib")
 
 
 ClientTabData clientTabData;
@@ -144,69 +145,20 @@ LRESULT CALLBACK ClientTabWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 
     return 0;
 }
-void OpenConsole() {
-    if (AttachConsole(ATTACH_PARENT_PROCESS) == 0) {
-        AllocConsole();
-    }
-
-    FILE* fp_out;
-    if (freopen_s(&fp_out, "CONOUT$", "w", stdout) != 0) {
-        MessageBox(NULL, L"Не вдалося перенаправити stdout!", L"Помилка", MB_ICONERROR);
-    }
-
-    if (freopen_s(&fp_out, "CONOUT$", "w", stderr) != 0) {
-        MessageBox(NULL, L"Не вдалося перенаправити stderr!", L"Помилка", MB_ICONERROR);
-    }
-
-    FILE* fp_in;
-    if (freopen_s(&fp_in, "CONIN$", "r", stdin) != 0) {
-        MessageBox(NULL, L"Не вдалося перенаправити stdin!", L"Помилка", MB_ICONERROR);
-    }
-
-    SetConsoleOutputCP(1251);
-    SetConsoleCP(1251);
-
-    std::ios_base::sync_with_stdio(false);
-}
-
-void pause_console() {
-    printf("Натисніть Enter для завершення...\n");
-    getchar();
-    getchar();
-}
-
-
-
-
 void connectToServer(const std::string& serverIp, int serverPort) {
-    OpenConsole(); // Відкрити консоль
-
     WSADATA wsaData;
-    int wsaResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-    if (wsaResult != 0) {
-        MessageBox(NULL, L"Не вдалося ініціалізувати Winsock!", L"Помилка", MB_ICONERROR);
-        return;
-    }
+    WSAStartup(MAKEWORD(2, 2), &wsaData);
 
     SOCKET clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (clientSocket == INVALID_SOCKET) {
         MessageBox(NULL, L"Не вдалося створити сокет!", L"Помилка", MB_ICONERROR);
-        WSACleanup();
         return;
     }
 
     sockaddr_in serverAddr{};
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(serverPort);
-    serverAddr.sin_addr.s_addr = INADDR_ANY;
-
-    int result = inet_pton(AF_INET, serverIp.c_str(), &serverAddr.sin_addr);
-    if (result <= 0) {
-        MessageBox(NULL, L"Невірна IP-адреса сервера!", L"Помилка", MB_ICONERROR);
-        closesocket(clientSocket);
-        WSACleanup();
-        return;
-    }
+    inet_pton(AF_INET, serverIp.c_str(), &serverAddr.sin_addr);
 
     if (connect(clientSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
         MessageBox(NULL, L"Не вдалося підключитися до сервера!", L"Помилка", MB_ICONERROR);
@@ -215,47 +167,54 @@ void connectToServer(const std::string& serverIp, int serverPort) {
         return;
     }
 
-    MessageBox(NULL, L"Підключено до сервера!", L"Успіх", MB_OK);
-    send(clientSocket, currentUser.login.c_str(), currentUser.login.size(), 0);
-    int n;
-    std::cout << "Введіть розмір матриці n (n x n): ";
-    std::cin >> n;
+    std::atomic<bool> isRunning(true);
+    std::thread mouseThread([&]() {
+        POINT lastPos = { 0, 0 };
+        while (isRunning) {
+            POINT pos;
+            GetCursorPos(&pos);
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-    // Відправляємо n як розмір (4 байти у мережевому порядку)
-    int netLength = htonl(n);
-    if (!sendAll(clientSocket, (char*)&netLength, sizeof(netLength))) {
-        std::cout << "Помилка при відправленні розміру матриці!" << std::endl;
-        closesocket(clientSocket);
-        WSACleanup();
-        FreeConsole();
-        return;
-    }
+            if (pos.x != lastPos.x || pos.y != lastPos.y) {
+                int data[3] = { pos.x, pos.y, 0 }; // 0 — рух
+                send(clientSocket, (char*)data, sizeof(data), 0);
+                lastPos = pos;
+            }
 
-    // Тепер чекаємо на отримання матриці
-    int netMessageLength = 0;
-    if (!recvAll(clientSocket, (char*)&netMessageLength, sizeof(netMessageLength))) {
-        std::cout << "Помилка при отриманні довжини матриці!" << std::endl;
-        closesocket(clientSocket);
-        WSACleanup();
-        FreeConsole();
-        return;
-    }
-    int messageLength = ntohl(netMessageLength);
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        });
 
-    char buffer[4096];
-    int bytesReceived = recvAll(clientSocket, buffer, messageLength);
-    if (bytesReceived <= 0) {
-        std::cout << "Помилка при отриманні матриці або сервер закрив з'єднання." << std::endl;
-    }
-    else {
-        buffer[bytesReceived] = '\0';
-        std::cout << "Отримано від сервера:\n" << buffer << std::endl;
+    char* buffer = new char[1920 * 1080];
+    cv::namedWindow("Remote Desktop");
+
+    while (true) {
+        int imgSize = 0;
+        if (recv(clientSocket, (char*)&imgSize, sizeof(imgSize), MSG_WAITALL) <= 0) break;
+
+        std::vector<uchar> imgBuffer(imgSize);
+        int totalReceived = 0;
+        while (totalReceived < imgSize) {
+            int bytes = recv(clientSocket, (char*)imgBuffer.data() + totalReceived, imgSize - totalReceived, 0);
+            if (bytes <= 0) break;
+            totalReceived += bytes;
+        }
+
+        cv::Mat img = cv::imdecode(imgBuffer, cv::IMREAD_COLOR);
+        if (!img.empty()) {
+            cv::imshow("Remote Desktop", img);
+        }
+
+        if (cv::waitKey(30) == 27) { // Escape
+            isRunning = false;
+            break;
+        }
     }
 
     closesocket(clientSocket);
     WSACleanup();
-    FreeConsole();
 }
+
 
 
 

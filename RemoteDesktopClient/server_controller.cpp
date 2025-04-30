@@ -4,20 +4,128 @@
 #include <string>
 #include "server_tab.h"
 #include <iostream>
-#include <fstream>
-#include <sstream>
 #include <string>
 #include <map>
 #include <curl/curl.h>
+#include <winsock2.h>
+#include <windows.h>
+#include <opencv2/opencv.hpp>
+#include <ws2tcpip.h>
+#include <vector>
+#include <unordered_map>
+#include <thread>
 
-#pragma comment(lib, "ws2_32.lib")  // Лінкуємо бібліотеку Winsock
+#pragma comment(lib, "Gdi32.lib")
+#pragma comment(lib, "User32.lib")
+#pragma comment(lib, "ws2_32.lib")
+
+#define WIDTH 1920
+#define HEIGHT 1080
+#define SCALE 1
+#define NEW_WIDTH (WIDTH / SCALE)
+#define NEW_HEIGHT (HEIGHT / SCALE)
+#define PORT 12345
 std::map<int, SOCKET> activeClients; // ключ — порт сервера, значення — клієнтський сокет
 #include "serverUserRegistration.h"
 
 SOCKET serverSocket;
 bool serverRunning = false;  // Флаг для перевірки, чи сервер вже запущений
 
+std::unordered_map<int, bool> keyStates;
 
+//  Зняття скріншоту
+void CaptureScreen(cv::Mat& frame) {
+    HDC hScreen = GetDC(NULL);
+    HDC hDC = CreateCompatibleDC(hScreen);
+    HBITMAP hBitmap = CreateCompatibleBitmap(hScreen, WIDTH, HEIGHT);
+    SelectObject(hDC, hBitmap);
+    BitBlt(hDC, 0, 0, WIDTH, HEIGHT, hScreen, 0, 0, SRCCOPY);
+
+    BITMAPINFOHEADER bi = { sizeof(BITMAPINFOHEADER), WIDTH, -HEIGHT, 1, 24, BI_RGB };
+    cv::Mat fullFrame(HEIGHT, WIDTH, CV_8UC3);
+    GetDIBits(hScreen, hBitmap, 0, HEIGHT, fullFrame.data, (BITMAPINFO*)&bi, DIB_RGB_COLORS);
+
+    cv::resize(fullFrame, frame, cv::Size(NEW_WIDTH, NEW_HEIGHT));
+    cv::cvtColor(frame, frame, cv::COLOR_BGR2RGB);
+
+    DeleteObject(hBitmap);
+    DeleteDC(hDC);
+    ReleaseDC(NULL, hScreen);
+}
+
+// Приймаємо координати миші від клієнта та коригуємо їх
+void SimulateMouse(int x, int y, int leftClick, int rightClick) {
+    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+
+    // Логування розмірів екрана
+    std::cout << "Розміри екрану сервера: " << screenWidth << "x" << screenHeight << std::endl;
+
+    // Переведення координат до абсолютних
+    x = (x * 65535) / screenWidth;
+    y = (y * 65535) / screenHeight;
+
+    // Логування відкоригованих координат
+    std::cout << "Відкориговані координати миші на сервері: (" << x << ", " << y << ")" << std::endl;
+
+    INPUT input = { 0 };
+    input.type = INPUT_MOUSE;
+    input.mi.dx = x;
+    input.mi.dy = y;
+    input.mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
+    SendInput(1, &input, sizeof(INPUT));
+
+    // Імітація ЛКМ
+    if (leftClick) {
+        input.mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+        SendInput(1, &input, sizeof(INPUT));
+        input.mi.dwFlags = MOUSEEVENTF_LEFTUP;
+        SendInput(1, &input, sizeof(INPUT));
+        std::cout << "ЛКМ клік у точці (" << x << ", " << y << ")" << std::endl;
+    }
+
+    // Імітація ПКМ
+    if (rightClick) {
+        input.mi.dwFlags = MOUSEEVENTF_RIGHTDOWN;
+        SendInput(1, &input, sizeof(INPUT));
+        input.mi.dwFlags = MOUSEEVENTF_RIGHTUP;
+        SendInput(1, &input, sizeof(INPUT));
+        std::cout << "ПКМ клік у точці (" << x << ", " << y << ")" << std::endl;
+    }
+}
+
+
+void ProcessMouseData(char* data) {
+    int x, y, leftClick, rightClick;
+    memcpy(&x, data, sizeof(int));
+    memcpy(&y, data + sizeof(int), sizeof(int));
+    memcpy(&leftClick, data + 2 * sizeof(int), sizeof(int));
+    memcpy(&rightClick, data + 3 * sizeof(int), sizeof(int));
+
+    // Логування координат, які отримано на сервері
+    std::cout << "Отримано координати миші на сервері: (" << x << ", " << y << ")" << std::endl;
+    std::cout << "ЛКМ: " << leftClick << ", ПКМ: " << rightClick << std::endl;
+
+    // Імітуємо натискання миші
+    SimulateMouse(x, y, leftClick, rightClick);
+}
+
+
+//  Імітація натискання клавіші
+void SimulateKeyPress(int key, bool isPressed) {
+    INPUT input = { 0 };
+    input.type = INPUT_KEYBOARD;
+    input.ki.wVk = key;
+
+    if (isPressed) {
+        input.ki.dwFlags = 0;
+    }
+    else {
+        input.ki.dwFlags = KEYEVENTF_KEYUP;
+    }
+
+    SendInput(1, &input, sizeof(INPUT));
+}
 
 size_t WriteCallbackController(void* contents, size_t size, size_t nmemb, std::string* output) {
     size_t totalSize = size * nmemb;
@@ -89,57 +197,55 @@ bool sendAll(SOCKET socket, const char* data, int totalBytes) {
 }
 
 void handleClient(HWND hwnd, SOCKET clientSocket) {
-    FILE* f;
-    freopen_s(&f, "CONOUT$", "w", stdout);
-
-    logMessage(hwnd, "Обробка клієнта...");
-    setStatusColor(hwnd, 'y');
-
-    // Читання розміру матриці (4 байти для збереження довжини)
-    int netLength = 0;
-    if (!recvAll(clientSocket, (char*)&netLength, sizeof(netLength))) {
-        closesocket(clientSocket);
-        return;
-    }
-    int n = ntohl(netLength); // Перетворення з мережевого формату в локальний
-
-
-    if (n <= 0 || n > 1000) {
+    char clientType[16] = { 0 };
+    int received = recv(clientSocket, clientType, sizeof(clientType) - 1, 0);
+    if (received <= 0) {
         closesocket(clientSocket);
         return;
     }
 
-    // Формуємо матрицю
-    std::ostringstream matrixStream;
-    srand(time(NULL)); // Ініціалізуємо генератор випадкових чисел
-    for (int i = 0; i < n; ++i) {
-        for (int j = 0; j < n; ++j) {
-            int val = rand() % 100;
-            matrixStream << val << " ";
+        // Трансляція екрана
+        cv::Mat frame;
+        std::vector<uchar> buffer;
+
+        while (true) {
+            CaptureScreen(frame);
+            cv::imencode(".jpg", frame, buffer, { cv::IMWRITE_JPEG_QUALITY, 80 });
+
+            int imgSize = buffer.size();
+            int sentBytes = send(clientSocket, (char*)&imgSize, sizeof(imgSize), 0);
+            if (sentBytes == SOCKET_ERROR) break;
+
+            sentBytes = send(clientSocket, (char*)buffer.data(), imgSize, 0);
+            if (sentBytes == SOCKET_ERROR) break;
+
+            fd_set readfds;
+            struct timeval timeout;
+            FD_ZERO(&readfds);
+            FD_SET(clientSocket, &readfds);
+            timeout.tv_sec = 0;
+            timeout.tv_usec = 1000;
+
+            if (select(0, &readfds, NULL, NULL, &timeout) > 0) {
+                int data[4];
+                int receivedBytes = recv(clientSocket, (char*)data, sizeof(data), 0);
+                if (receivedBytes == sizeof(data)) {
+                    if (data[1] == 0 || data[1] == 1) {
+                        SimulateKeyPress(data[0], data[1]);
+                    }
+                    else {
+                        SimulateMouse(data[0], data[1], data[2], data[3]);
+                    }
+                }
+            }
+
+            Sleep(1);
         }
-        matrixStream << "\n";
-    }
 
-    std::string matrixStr = matrixStream.str();
-
-    // Відправляємо результат клієнту: спочатку розмір, потім матриця
-    int messageLength = matrixStr.size();
-    int netMessageLength = htonl(messageLength); // Перетворюємо довжину в мережевий формат
-    if (!sendAll(clientSocket, (char*)&netMessageLength, sizeof(netMessageLength))) {
         closesocket(clientSocket);
-        return;
-    }
-
-    // Надсилаємо саму матрицю
-    if (!sendAll(clientSocket, matrixStr.c_str(), messageLength)) {
-        //std::cout << "Помилка при відправленні матриці клієнту!" << std::endl;
-    }
-    else {
-        //std::cout << "Матриця успішно відправлена клієнту!" << std::endl;
-    }
-
-    closesocket(clientSocket);
+   
 }
+
 
 
 
