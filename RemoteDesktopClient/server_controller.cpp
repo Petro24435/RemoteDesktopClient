@@ -56,40 +56,41 @@ void CaptureScreen(cv::Mat& frame) {
 
 // Приймаємо координати миші від клієнта та коригуємо їх
 void SimulateMouse(int x, int y, int leftClick, int rightClick) {
+    static int prevLeftClick = 0;
+    static int prevRightClick = 0;
+
     int screenWidth = GetSystemMetrics(SM_CXSCREEN);
     int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-
     int absX = (x * 65535) / screenWidth;
     int absY = (y * 65535) / screenHeight;
 
-    // Переміщення курсора
-    INPUT input = { 0 };
-    input.type = INPUT_MOUSE;
-    input.mi.dx = absX;
-    input.mi.dy = absY;
-    input.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
-    SendInput(1, &input, sizeof(INPUT));
+    // Переміщення миші
+    INPUT move = { 0 };
+    move.type = INPUT_MOUSE;
+    move.mi.dx = absX;
+    move.mi.dy = absY;
+    move.mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
+    SendInput(1, &move, sizeof(INPUT));
 
-    // ЛКМ
-    if (leftClick) {
-        input.mi.dx = 0;
-        input.mi.dy = 0;
-        input.mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
-        SendInput(1, &input, sizeof(INPUT));
-        input.mi.dwFlags = MOUSEEVENTF_LEFTUP;
-        SendInput(1, &input, sizeof(INPUT));
+    // Зміна стану ЛКМ
+    if (leftClick != prevLeftClick) {
+        INPUT click = { 0 };
+        click.type = INPUT_MOUSE;
+        click.mi.dwFlags = (leftClick) ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP;
+        SendInput(1, &click, sizeof(INPUT));
+        prevLeftClick = leftClick;
     }
 
-    // ПКМ
-    if (rightClick) {
-        input.mi.dx = 0;
-        input.mi.dy = 0;
-        input.mi.dwFlags = MOUSEEVENTF_RIGHTDOWN;
-        SendInput(1, &input, sizeof(INPUT));
-        input.mi.dwFlags = MOUSEEVENTF_RIGHTUP;
-        SendInput(1, &input, sizeof(INPUT));
+    // Зміна стану ПКМ
+    if (rightClick != prevRightClick) {
+        INPUT click = { 0 };
+        click.type = INPUT_MOUSE;
+        click.mi.dwFlags = (rightClick) ? MOUSEEVENTF_RIGHTDOWN : MOUSEEVENTF_RIGHTUP;
+        SendInput(1, &click, sizeof(INPUT));
+        prevRightClick = rightClick;
     }
 }
+
 
 
 void ProcessMouseData(char* data) {
