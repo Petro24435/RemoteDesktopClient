@@ -151,11 +151,6 @@ void connectToServer(const std::string& serverIp, int serverPort) {
     WSAStartup(MAKEWORD(2, 2), &wsaData);
 
     SOCKET clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (clientSocket == INVALID_SOCKET) {
-        MessageBox(NULL, L"Не вдалося створити сокет!", L"Помилка", MB_ICONERROR);
-        return;
-    }
-
     sockaddr_in serverAddr{};
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(serverPort);
@@ -174,24 +169,20 @@ void connectToServer(const std::string& serverIp, int serverPort) {
         while (isRunning) {
             POINT pos;
             GetCursorPos(&pos);
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
             if (pos.x != lastPos.x || pos.y != lastPos.y) {
-                int data[3] = { pos.x, pos.y, 0 }; // 0 — рух
+                int data[3] = { pos.x, pos.y, 0 };
                 send(clientSocket, (char*)data, sizeof(data), 0);
                 lastPos = pos;
             }
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
         });
 
-    char* buffer = new char[1920 * 1080];
     cv::namedWindow("Remote Desktop");
-
     while (true) {
         int imgSize = 0;
-        if (recv(clientSocket, (char*)&imgSize, sizeof(imgSize), MSG_WAITALL) <= 0) break;
+        if (recv(clientSocket, (char*)&imgSize, sizeof(imgSize), MSG_WAITALL) <= 0)
+            break;
 
         std::vector<uchar> imgBuffer(imgSize);
         int totalReceived = 0;
@@ -206,12 +197,13 @@ void connectToServer(const std::string& serverIp, int serverPort) {
             cv::imshow("Remote Desktop", img);
         }
 
-        if (cv::waitKey(30) == 27) { // Escape
+        if (cv::waitKey(30) == 27) {
             isRunning = false;
             break;
         }
     }
 
+    mouseThread.join();
     closesocket(clientSocket);
     WSACleanup();
 }

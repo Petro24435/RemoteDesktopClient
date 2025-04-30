@@ -205,45 +205,47 @@ void handleClient(HWND hwnd, SOCKET clientSocket) {
         return;
     }
 
-        // Трансляція екрана
-        cv::Mat frame;
-        std::vector<uchar> buffer;
+    cv::Mat frame_raw, frame_bgr;
+    std::vector<uchar> buffer;
 
-        while (true) {
-            CaptureScreen(frame);
-            cv::imencode(".jpg", frame, buffer, { cv::IMWRITE_JPEG_QUALITY, 80 });
+    while (true) {
+        // Захоплення екрана
+        CaptureScreen(frame_raw);  // повинен повертати BGRA
+        cv::cvtColor(frame_raw, frame_bgr, cv::COLOR_BGRA2RGB);  // правильно конвертуємо кольори
 
-            int imgSize = buffer.size();
-            int sentBytes = send(clientSocket, (char*)&imgSize, sizeof(imgSize), 0);
-            if (sentBytes == SOCKET_ERROR) break;
+        // JPEG компресія
+        buffer.clear();
+        cv::imencode(".jpg", frame_bgr, buffer, { cv::IMWRITE_JPEG_QUALITY, 80 });
 
-            sentBytes = send(clientSocket, (char*)buffer.data(), imgSize, 0);
-            if (sentBytes == SOCKET_ERROR) break;
+        // Надсилання розміру
+        int imgSize = buffer.size();
+        if (send(clientSocket, (char*)&imgSize, sizeof(imgSize), 0) == SOCKET_ERROR)
+            break;
 
-            fd_set readfds;
-            struct timeval timeout;
-            FD_ZERO(&readfds);
-            FD_SET(clientSocket, &readfds);
-            timeout.tv_sec = 0;
-            timeout.tv_usec = 1000;
+        // Надсилання зображення
+        if (send(clientSocket, reinterpret_cast<char*>(buffer.data()), imgSize, 0) == SOCKET_ERROR)
+            break;
 
-            if (select(0, &readfds, NULL, NULL, &timeout) > 0) {
-                int data[4];
-                int receivedBytes = recv(clientSocket, (char*)data, sizeof(data), 0);
-                if (receivedBytes == sizeof(data)) {
-                    if (data[1] == 0 || data[1] == 1) {
-                        SimulateKeyPress(data[0], data[1]);
-                    }
-                    else {
-                        SimulateMouse(data[0], data[1], data[2], data[3]);
-                    }
-                }
+        // Прийом команд (опціонально)
+        fd_set readfds;
+        FD_ZERO(&readfds);
+        FD_SET(clientSocket, &readfds);
+        timeval timeout{ 0, 1000 };
+        if (select(0, &readfds, nullptr, nullptr, &timeout) > 0) {
+            int data[4];
+            int receivedBytes = recv(clientSocket, (char*)data, sizeof(data), 0);
+            if (receivedBytes == sizeof(data)) {
+                if (data[1] == 0 || data[1] == 1)
+                    SimulateKeyPress(data[0], data[1]);
+                else
+                    SimulateMouse(data[0], data[1], data[2], data[3]);
             }
-
-            Sleep(1);
         }
 
-        closesocket(clientSocket);
+        Sleep(10);  // throttle
+    }
+
+    closesocket(clientSocket);
    
 }
 
