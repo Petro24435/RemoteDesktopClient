@@ -58,16 +58,9 @@ void CaptureScreen(cv::Mat& frame) {
 void SimulateMouse(int x, int y, int leftClick, int rightClick) {
     int screenWidth = GetSystemMetrics(SM_CXSCREEN);
     int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-
-    // Логування розмірів екрана
-    std::cout << "Розміри екрану сервера: " << screenWidth << "x" << screenHeight << std::endl;
-
     // Переведення координат до абсолютних
     x = (x * 65535) / screenWidth;
     y = (y * 65535) / screenHeight;
-
-    // Логування відкоригованих координат
-    std::cout << "Відкориговані координати миші на сервері: (" << x << ", " << y << ")" << std::endl;
 
     INPUT input = { 0 };
     input.type = INPUT_MOUSE;
@@ -82,7 +75,6 @@ void SimulateMouse(int x, int y, int leftClick, int rightClick) {
         SendInput(1, &input, sizeof(INPUT));
         input.mi.dwFlags = MOUSEEVENTF_LEFTUP;
         SendInput(1, &input, sizeof(INPUT));
-        std::cout << "ЛКМ клік у точці (" << x << ", " << y << ")" << std::endl;
     }
 
     // Імітація ПКМ
@@ -91,7 +83,6 @@ void SimulateMouse(int x, int y, int leftClick, int rightClick) {
         SendInput(1, &input, sizeof(INPUT));
         input.mi.dwFlags = MOUSEEVENTF_RIGHTUP;
         SendInput(1, &input, sizeof(INPUT));
-        std::cout << "ПКМ клік у точці (" << x << ", " << y << ")" << std::endl;
     }
 }
 
@@ -102,11 +93,6 @@ void ProcessMouseData(char* data) {
     memcpy(&y, data + sizeof(int), sizeof(int));
     memcpy(&leftClick, data + 2 * sizeof(int), sizeof(int));
     memcpy(&rightClick, data + 3 * sizeof(int), sizeof(int));
-
-    // Логування координат, які отримано на сервері
-    std::cout << "Отримано координати миші на сервері: (" << x << ", " << y << ")" << std::endl;
-    std::cout << "ЛКМ: " << leftClick << ", ПКМ: " << rightClick << std::endl;
-
     // Імітуємо натискання миші
     SimulateMouse(x, y, leftClick, rightClick);
 }
@@ -332,6 +318,7 @@ void serverThreadFunction(HWND hwnd, std::string serverLogin, int serverPort, st
             // Додаємо клієнта в активні клієнти
             activeClients[serverPort] = clientSocket;
             logMessage(hwnd, "Новий клієнт підключився до порту " + std::to_string(serverPort));
+            setStatusColor(hwnd, 'y');
 
             // Далі вже обробка логіну, наприклад:
             char loginBuffer[256] = { 0 };
@@ -376,6 +363,7 @@ void addConnection(HWND hwnd, const std::string& serverLogin, int serverPort, co
 
     if (!serverRunning) {
         std::thread(serverThreadFunction, hwnd, serverLogin, serverPort, serverKey, serverIp).detach();
+        setStatusColor(hwnd, 'y');
     }
 }
 
@@ -400,6 +388,7 @@ void removeConnection(HWND hwnd, const std::string& serverLogin, int serverPort)
         }
         WSACleanup();
         logMessage(hwnd, "Сервер закрито для порту " + std::to_string(serverPort));
+        setStatusColor(hwnd, 'g');
     }
 }
 
@@ -413,7 +402,7 @@ void updateConnection(HWND hwnd, int serverPort, const std::string& clientLogin,
         "{\"port\":" + std::to_string(serverPort) +
         ",\"clientLogin\":\"" + clientLogin +
         "\",\"clientIp\":\"" + clientIp + "\"}";
-
+    setStatusColor(hwnd, 'y');
     std::string response;
     if (!PostJson(url, jsonData, response)) {
         logMessage(hwnd, "Помилка при оновленні з'єднання");
@@ -436,6 +425,7 @@ void disconnectClient(HWND hwnd, int serverPort) {
         closesocket(it->second);
         activeClients.erase(it);
         logMessage(hwnd, "Клієнтський сокет для порту " + std::to_string(serverPort) + " закрито.");
+        setStatusColor(hwnd, 'g');
     }
     else {
         logMessage(hwnd, "Не знайдено активного клієнта для порту " + std::to_string(serverPort));

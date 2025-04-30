@@ -14,6 +14,6 @@ public:
     static bool ChangeName(const std::string& oldUsername, const std::string& password, const std::string& newUsername);
     static bool ChangePassword(const std::string& username, const std::string& oldPassword, const std::string& newPassword);
 };
-
+std::string GetLocalIPAddress();
 
 #endif // AUTH_H

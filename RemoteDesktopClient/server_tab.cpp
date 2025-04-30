@@ -122,7 +122,6 @@ LRESULT CALLBACK ServerTabWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
             savePortsToCSV(getUsedPorts(), "C:/opencv/used_ports.csv");
             addConnection(hwnd, currentUser.login, port, newKey, currentUser.ip);
             //SetWindowText(GetDlgItem(hwnd, 4009), L"Помилка при підключенні!");4006
-            setStatusColor(hwnd, RGB(255, 255, 0)); // Жовтий
             MessageBox(hwnd, L"Сервер відкрито", L"Успіх", MB_OK);
             break;
         }
@@ -131,6 +130,7 @@ LRESULT CALLBACK ServerTabWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
             
             removeConnection(hwnd, currentUser.login, port);
             MessageBox(hwnd, L"Закрито з'єднання і очищено таблиці", L"Успіх", MB_OK);
+            setStatusColor(hwnd, '0');
             break;
 
         case 4011:
@@ -314,8 +314,8 @@ void setStatusColor(HWND hwnd, char c) {
     case'b': currentStatusColor = RGB(0, 0, 255); break;
     case'y': currentStatusColor = RGB(255, 255, 0); break;
     case'w': currentStatusColor = RGB(255, 255, 255); break;
+    case'0': currentStatusColor = RGB(192, 192, 192); break;
     default:
-    currentStatusColor = RGB(192, 192, 192);
     break;
     }
 

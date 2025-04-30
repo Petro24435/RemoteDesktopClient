@@ -79,7 +79,7 @@ LRESULT CALLBACK ClientTabWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             //    return 0;
             //}
 
-            MessageBox(hwnd, L"Підключення успішне!", L"OK", MB_OK);
+            //MessageBox(hwnd, L"Підключення успішне!", L"OK", MB_OK);
 
             // Оновлення з'єднання — додавання клієнта
             std::thread([=]() {
