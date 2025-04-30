@@ -22,7 +22,7 @@
 
 #define WIDTH 1920
 #define HEIGHT 1080
-#define SCALE 1
+#define SCALE 2
 #define NEW_WIDTH (WIDTH / SCALE)
 #define NEW_HEIGHT (HEIGHT / SCALE)
 #define PORT 12345
@@ -59,8 +59,6 @@ void SimulateMouse(int x, int y, int leftClick, int rightClick) {
     int screenWidth = GetSystemMetrics(SM_CXSCREEN);
     int screenHeight = GetSystemMetrics(SM_CYSCREEN);
     // Переведення координат до абсолютних
-    x = (x * 65535) / screenWidth;
-    y = (y * 65535) / screenHeight;
 
     INPUT input = { 0 };
     input.type = INPUT_MOUSE;
