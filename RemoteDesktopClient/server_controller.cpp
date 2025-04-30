@@ -42,46 +42,48 @@ void CaptureScreen(cv::Mat& frame) {
     SelectObject(hDC, hBitmap);
     BitBlt(hDC, 0, 0, WIDTH, HEIGHT, hScreen, 0, 0, SRCCOPY);
 
-    BITMAPINFOHEADER bi = { sizeof(BITMAPINFOHEADER), WIDTH, -HEIGHT, 1, 24, BI_RGB };
-    cv::Mat fullFrame(HEIGHT, WIDTH, CV_8UC3);
-    GetDIBits(hScreen, hBitmap, 0, HEIGHT, fullFrame.data, (BITMAPINFO*)&bi, DIB_RGB_COLORS);
+    BITMAPINFOHEADER bi = { sizeof(BITMAPINFOHEADER), WIDTH, -HEIGHT, 1, 32, BI_RGB };
+    cv::Mat raw(HEIGHT, WIDTH, CV_8UC4);
+    GetDIBits(hScreen, hBitmap, 0, HEIGHT, raw.data, (BITMAPINFO*)&bi, DIB_RGB_COLORS);
 
-    cv::resize(fullFrame, frame, cv::Size(NEW_WIDTH, NEW_HEIGHT));
-    cv::cvtColor(frame, frame, cv::COLOR_BGR2RGB);
+    cv::resize(raw, frame, cv::Size(NEW_WIDTH, NEW_HEIGHT));
 
     DeleteObject(hBitmap);
     DeleteDC(hDC);
     ReleaseDC(NULL, hScreen);
 }
 
+
 // Приймаємо координати миші від клієнта та коригуємо їх
 void SimulateMouse(int x, int y, int leftClick, int rightClick) {
     int screenWidth = GetSystemMetrics(SM_CXSCREEN);
     int screenHeight = GetSystemMetrics(SM_CYSCREEN);
 
-    // Масштабування координат до абсолютних (0 - 65535)
     int absX = (x * 65535) / screenWidth;
     int absY = (y * 65535) / screenHeight;
 
+    // Переміщення курсора
     INPUT input = { 0 };
     input.type = INPUT_MOUSE;
     input.mi.dx = absX;
     input.mi.dy = absY;
-    input.mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
-    input.mi.time = 0;
-    input.mi.dwExtraInfo = GetMessageExtraInfo();
+    input.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
     SendInput(1, &input, sizeof(INPUT));
 
-    // Імітація ЛКМ
+    // ЛКМ
     if (leftClick) {
+        input.mi.dx = 0;
+        input.mi.dy = 0;
         input.mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
         SendInput(1, &input, sizeof(INPUT));
         input.mi.dwFlags = MOUSEEVENTF_LEFTUP;
         SendInput(1, &input, sizeof(INPUT));
     }
 
-    // Імітація ПКМ
+    // ПКМ
     if (rightClick) {
+        input.mi.dx = 0;
+        input.mi.dy = 0;
         input.mi.dwFlags = MOUSEEVENTF_RIGHTDOWN;
         SendInput(1, &input, sizeof(INPUT));
         input.mi.dwFlags = MOUSEEVENTF_RIGHTUP;
@@ -106,16 +108,10 @@ void SimulateKeyPress(int key, bool isPressed) {
     INPUT input = { 0 };
     input.type = INPUT_KEYBOARD;
     input.ki.wVk = key;
-
-    if (isPressed) {
-        input.ki.dwFlags = 0;
-    }
-    else {
-        input.ki.dwFlags = KEYEVENTF_KEYUP;
-    }
-
+    input.ki.dwFlags = isPressed ? 0 : KEYEVENTF_KEYUP;
     SendInput(1, &input, sizeof(INPUT));
 }
+
 
 size_t WriteCallbackController(void* contents, size_t size, size_t nmemb, std::string* output) {
     size_t totalSize = size * nmemb;
@@ -187,6 +183,7 @@ bool sendAll(SOCKET socket, const char* data, int totalBytes) {
 }
 
 void handleClient(HWND hwnd, SOCKET clientSocket) {
+    // Отримуємо тип клієнта (не обов'язково, якщо тільки один тип)
     char clientType[16] = { 0 };
     int received = recv(clientSocket, clientType, sizeof(clientType) - 1, 0);
     if (received <= 0) {
@@ -198,45 +195,40 @@ void handleClient(HWND hwnd, SOCKET clientSocket) {
     std::vector<uchar> buffer;
 
     while (true) {
-        // Захоплення екрана
-        CaptureScreen(frame_raw);  // повинен повертати BGRA
-        cv::cvtColor(frame_raw, frame_bgr, cv::COLOR_BGRA2RGB);  // правильно конвертуємо кольори
-
-        // JPEG компресія
+        // Захоплення і кодування зображення
+        CaptureScreen(frame_raw);
+        cv::cvtColor(frame_raw, frame_bgr, cv::COLOR_BGRA2BGR);  // OpenCV працює з BGR
         buffer.clear();
         cv::imencode(".jpg", frame_bgr, buffer, { cv::IMWRITE_JPEG_QUALITY, 80 });
 
-        // Надсилання розміру
-        int imgSize = buffer.size();
-        if (send(clientSocket, (char*)&imgSize, sizeof(imgSize), 0) == SOCKET_ERROR)
-            break;
+        // Відправляємо розмір та зображення
+        int imgSize = static_cast<int>(buffer.size());
+        if (send(clientSocket, (char*)&imgSize, sizeof(imgSize), 0) == SOCKET_ERROR) break;
+        if (send(clientSocket, reinterpret_cast<char*>(buffer.data()), imgSize, 0) == SOCKET_ERROR) break;
 
-        // Надсилання зображення
-        if (send(clientSocket, reinterpret_cast<char*>(buffer.data()), imgSize, 0) == SOCKET_ERROR)
-            break;
-
-        // Прийом команд (опціонально)
+        // Прийом команд
         fd_set readfds;
         FD_ZERO(&readfds);
         FD_SET(clientSocket, &readfds);
-        timeval timeout{ 0, 1000 };
+        timeval timeout{ 0, 1000 };  // 1 мс
+
         if (select(0, &readfds, nullptr, nullptr, &timeout) > 0) {
             int data[4];
-            int receivedBytes = recv(clientSocket, (char*)data, sizeof(data), 0);
-            if (receivedBytes == sizeof(data)) {
+            int bytes = recv(clientSocket, (char*)data, sizeof(data), 0);
+            if (bytes == sizeof(data)) {
                 if (data[1] == 0 || data[1] == 1)
-                    SimulateKeyPress(data[0], data[1]);
+                    SimulateKeyPress(data[0], data[1]);  // клавіатура
                 else
-                    SimulateMouse(data[0], data[1], data[2], data[3]);
+                    SimulateMouse(data[0], data[1], data[2], data[3]);  // миша
             }
         }
 
-        Sleep(10);  // throttle
+        Sleep(10);  // обмежуємо FPS ~100
     }
 
     closesocket(clientSocket);
-   
 }
+
 
 
 

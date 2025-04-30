@@ -166,15 +166,47 @@ void connectToServer(const std::string& serverIp, int serverPort) {
     std::atomic<bool> isRunning(true);
     std::thread mouseThread([&]() {
         POINT lastPos = { 0, 0 };
+        bool lButtonDown = false;
+        bool rButtonDown = false;
+
         while (isRunning) {
             POINT pos;
             GetCursorPos(&pos);
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+            SHORT lState = GetAsyncKeyState(VK_LBUTTON);
+            SHORT rState = GetAsyncKeyState(VK_RBUTTON);
+
+            int action = 0;
+
             if (pos.x != lastPos.x || pos.y != lastPos.y) {
-                int data[3] = { pos.x, pos.y, 0 };
-                send(clientSocket, (char*)data, sizeof(data), 0);
-                lastPos = pos;
+                action = 0; // move
             }
+
+            if ((lState & 0x8000) && !lButtonDown) {
+                action = 1; // L down
+                lButtonDown = true;
+            }
+            else if (!(lState & 0x8000) && lButtonDown) {
+                action = 2; // L up
+                lButtonDown = false;
+            }
+
+            if ((rState & 0x8000) && !rButtonDown) {
+                action = 3; // R down
+                rButtonDown = true;
+            }
+            else if (!(rState & 0x8000) && rButtonDown) {
+                action = 4; // R up
+                rButtonDown = false;
+            }
+
+            if (action >= 0) {
+                int data[3] = { pos.x, pos.y, action };
+                send(clientSocket, (char*)data, sizeof(data), 0);
+            }
+
+            lastPos = pos;
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
         });
 
@@ -207,6 +239,7 @@ void connectToServer(const std::string& serverIp, int serverPort) {
     closesocket(clientSocket);
     WSACleanup();
 }
+
 
 // Функція для малювання елементів вкладки клієнта
 void DrawClientTab(HWND hwnd) {
