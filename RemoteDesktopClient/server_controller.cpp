@@ -22,7 +22,7 @@
 
 #define WIDTH 1920
 #define HEIGHT 1080
-#define SCALE 2
+#define SCALE 1.5
 #define NEW_WIDTH (WIDTH / SCALE)
 #define NEW_HEIGHT (HEIGHT / SCALE)
 #define PORT 12345

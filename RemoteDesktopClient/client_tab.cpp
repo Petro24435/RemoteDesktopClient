@@ -208,11 +208,6 @@ void connectToServer(const std::string& serverIp, int serverPort) {
     WSACleanup();
 }
 
-
-
-
-
-
 // Функція для малювання елементів вкладки клієнта
 void DrawClientTab(HWND hwnd) {
     CreateWindowEx(0, L"STATIC", L"Ключ:", WS_CHILD | WS_VISIBLE,
