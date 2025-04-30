@@ -52,7 +52,7 @@ LRESULT CALLBACK ProfileTabWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
                 MessageBox(hwnd, L"Ім’я користувача змінено успішно!", L"Успіх", MB_OK | MB_ICONINFORMATION);
             }
             else {
-                MessageBox(hwnd, L"Не вдалося змінити ім’я користувача. Можливо, воно вже зайняте або пароль невірний.", L"Помилка", MB_OK | MB_ICONERROR);
+                MessageBox(hwnd, L"Не вдалося змінити ім’я користувача. Можливо, воно вже зайняте.", L"Помилка", MB_OK | MB_ICONERROR);
             }
         }
 

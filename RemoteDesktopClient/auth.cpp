@@ -92,19 +92,40 @@ bool Auth::ChangeName(const std::string& oldUsername, const std::string& passwor
 
     struct curl_slist* headers = curl_slist_append(nullptr, "Content-Type: application/json");
 
+    std::string response;
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, json_data.c_str());
     curl_easy_setopt(curl, CURLOPT_POST, 1L);
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5L);
 
-    CURLcode res = curl_easy_perform(curl);
+    // Колбек для запису відповіді
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
+        +[](void* contents, size_t size, size_t nmemb, std::string* out) -> size_t {
+            size_t totalSize = size * nmemb;
+            out->append((char*)contents, totalSize);
+            return totalSize;
+        });
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
 
+    CURLcode res = curl_easy_perform(curl);
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
 
-    return (res == CURLE_OK);
+    if (res != CURLE_OK) {
+        std::cerr << "CURL error: " << curl_easy_strerror(res) << std::endl;
+        return false;
+    }
+
+    // Перевіряємо JSON відповідь
+    if (response.find("\"error\"") != std::string::npos) {
+        std::cerr << "Server error: " << response << std::endl;
+        return false;
+    }
+
+    return response.find("username updated") != std::string::npos;
 }
+
 
 bool Auth::ChangePassword(const std::string& username, const std::string& oldPassword, const std::string& newPassword) {
     CURL* curl = curl_easy_init();
