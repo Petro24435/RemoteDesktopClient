@@ -66,10 +66,13 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
     // Показуємо логін-вікно
     ShowWindow(hwndLogin, nCmdShow);
     UpdateWindow(hwndLogin);
-    if (GetLocalIPAddress() == "192.168.0.200") {
-        //system("start cmd /k \"cd /d C:\\Users\\nazar\\PycharmProjects\\sqlSPZdb &&  uvicorn main:app --host 192.168.0.200 --port 8000\"");
+    if (GetLocalIPAddress() == globalConfig.server_ip) {
+        //system("start cmd /k \"cd /d C:\\Users\\nazar\\PycharmProjects\\sqlSPZdb &&  uvicorn main:app --host {globalConfig.server_ip} --port {globalConfig.port}\"");
+        std::stringstream ss;
+        ss << "start cmd /k \"cd /d C:\\Users\\nazar\\PycharmProjects\\sqlSPZdb && uvicorn main:app --host "
+            << globalConfig.server_ip << " --port " << globalConfig.port << "\"";
+        system(ss.str().c_str());
     }
-
     // Основний цикл обробки повідомлень
     MSG msg;
     while (GetMessage(&msg, hwndLogin, 0, 0)) {

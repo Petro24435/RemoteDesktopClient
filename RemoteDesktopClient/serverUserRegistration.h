@@ -5,7 +5,7 @@
 
 // Структура конфігурації
 struct ServerConfig {
-    std::string server_ip = "192.168.0.200";   // IP сервера
+    std::string server_ip = "192.168.0.200";//"172.20.10.5";   // IP сервера
     int port = 8000;                        // Порт сервера
 
     std::string GetBaseUrl() const {
