@@ -155,6 +155,7 @@
     <ClInclude Include="auth.h" />
     <ClInclude Include="client_tab.h" />
     <ClInclude Include="friends_tab.h" />
+    <ClInclude Include="main.h" />
     <ClInclude Include="mainmenu.h" />
     <ClInclude Include="profile_tab.h" />
     <ClInclude Include="serverUserRegistration.h" />
