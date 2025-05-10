@@ -46,6 +46,7 @@ void InitTabsClient(HWND hwnd) {
     // Ініціалізація вкладок
     InitProfileTab(hTabPages[0]);
     InitLastConnectionsTab(hTabPages[1]);
+    InitClientTab(hTabPages[2]);
     //InitConnectToTab(hTabPages[2]);
     //InitActiveConnetionTab(hTabPages[3]);
 }
