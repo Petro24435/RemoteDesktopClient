@@ -42,7 +42,7 @@ LRESULT CALLBACK ClientTabWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             std::string key(wsKey.begin(), wsKey.end());
             std::string login(wsLogin.begin(), wsLogin.end());
             wchar_t buffer[16];
-            GetWindowText(GetDlgItem(hwnd, 3003), buffer, 16);
+            GetWindowText(GetDlgItem(hwnd, 3013), buffer, 16);
             int port = wcstol(buffer, NULL, 10);
 
             int filledFields = 0;
