@@ -158,9 +158,17 @@
     <ClInclude Include="main.h" />
     <ClInclude Include="mainmenu.h" />
     <ClInclude Include="profile_tab.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="serverUserRegistration.h" />
     <ClInclude Include="server_tab.h" />
     <ClInclude Include="sqlite3.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="bitmap1.bmp" />
+    <Image Include="close.bmp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resource.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

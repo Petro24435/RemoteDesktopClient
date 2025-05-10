@@ -1,6 +1,9 @@
 #ifndef SERVERUSERREGISTRATION_H
 #define SERVERUSERREGISTRATION_H
 
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
 #include <string>
 
 // Структура конфігурації
@@ -17,5 +20,6 @@ size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* out
 // Оголошуємо глобальну статичну змінну, яка буде використовуватися для всієї програми
 extern ServerConfig globalConfig;
 bool PostJson(const std::string& url, const std::string& jsonData, std::string& response);
+extern HINSTANCE hInst;
 #endif // SERVERUSERREGISTRATION_H
 

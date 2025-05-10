@@ -1,11 +1,11 @@
-#include "serverUserRegistration.h"
 #include "auth.h"
 #include "mainmenu.h"
 #include <windows.h>
 #include <string>
 #include <iostream>
 #include <sstream>
-HINSTANCE hInst;
+#include "serverUserRegistration.h"
+extern HINSTANCE hInst = NULL;
 Auth auth; // Додаємо змінну для перевірки статусу логіну
 // Обробка повідомлень для головного вікна
 //LRESULT CALLBACK WndProcLogin(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {

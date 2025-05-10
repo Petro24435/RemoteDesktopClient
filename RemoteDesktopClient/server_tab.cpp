@@ -1,4 +1,3 @@
-#include "server_tab.h"
 #include <string>
 #include <set>
 #include <vector>
@@ -11,8 +10,9 @@
 #include <iomanip>
 #include <cctype>
 #include <cstdio>
-
-
+#include "server_tab.h"
+#include "serverUserRegistration.h"
+#include "resource.h"
 
 int port;
 extern UserInfo currentUser;
@@ -40,6 +40,7 @@ HFONT hServerFont = CreateFont(16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
 HFONT hServerFont2 = CreateFont(16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
     DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
     DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
+bool mouseAccess = false, keyboardAccess = false;  // Перемикачі для флажків
 void DrawOpenConnectTab(HWND hwnd) 
 {
     std::wstring wip(currentUser.ip.begin(), currentUser.ip.end());
@@ -99,29 +100,44 @@ void DrawOpenConnectTab(HWND hwnd)
 void DrawConnectManagingTab(HWND hwnd)
 {
 
-    hCloseBtn = CreateWindowEx(0, L"BUTTON", L"Закрити з'єднання", WS_CHILD | WS_VISIBLE | WS_BORDER,\
+    // Створення кнопок
+    hCloseBtn = CreateWindowEx(0, L"BUTTON", L"Закрити З'єданння", WS_CHILD | WS_VISIBLE | WS_BORDER ,
         370, 60, 150, 25, hwnd, (HMENU)4006, NULL, NULL);
-
-    hDisconnectBtn = CreateWindowEx(0, L"BUTTON", L"Від'єднати Клієнта", WS_CHILD | WS_VISIBLE | WS_BORDER,\
+    hDisconnectBtn = CreateWindowEx(0, L"BUTTON", L"Вікдлючити Клієнта", WS_CHILD | WS_VISIBLE | WS_BORDER ,
         370, 100, 150, 25, hwnd, (HMENU)4007, NULL, NULL);
 
-    hGroupBoxAccess = CreateWindowEx(0, L"STATIC", L"Доступ:", WS_CHILD | WS_VISIBLE ,\
-        10, 40, 180, 80, hwnd, NULL, NULL, NULL);
-
-    hMouseAccess = CreateWindowEx(0, L"BUTTON", L"Миша", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,\
+    // Кнопки з флажками
+    hMouseAccess = CreateWindowEx(0, L"BUTTON", L"Миша", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, //| BS_BITMAP,
         20, 60, 150, 20, hwnd, (HMENU)4008, NULL, NULL);
-
-    hKeyboardAccess = CreateWindowEx(0, L"BUTTON", L"Клавіатура", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,\
+    hKeyboardAccess = CreateWindowEx(0, L"BUTTON", L"Клавіатура", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
         20, 90, 150, 20, hwnd, (HMENU)4009, NULL, NULL);
 
     hLabelClient = CreateWindowEx(0, L"STATIC", L"Клієнт:", WS_CHILD | WS_VISIBLE,\
         20, 210, 100, 20, hwnd, NULL, NULL, NULL);
-
-    hClientEdit = CreateWindowEx(0, L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,\
+    // Створення інших елементів інтерфейсу
+    hClientEdit = CreateWindowEx(0, L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,
         130, 210, 200, 25, hwnd, (HMENU)4010, NULL, NULL);
-
-    hLogEdit = CreateWindowEx(0, L"EDIT", L"Очікування...", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY | ES_MULTILINE,\
+    hLogEdit = CreateWindowEx(0, L"EDIT", L"Очікування...", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY | ES_MULTILINE,
         20, 220, 550, 50, hwnd, (HMENU)4011, NULL, NULL);
+
+    //// Встановлення зображень для кнопок
+    //SendMessage(hCloseBtn, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BITMAP_CLOSE)));
+    //SendMessage(hDisconnectBtn, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BITMAP_DISCONNECT)));
+
+    //// Для флажків змінюємо зображення залежно від стану
+    //if (mouseAccess) {
+    //    SendMessage(hMouseAccess, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BITMAP_MOUSE_ON)));
+    //}
+    //else {
+    //    SendMessage(hMouseAccess, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BITMAP_MOUSE_OFF)));
+    //}
+
+    //if (keyboardAccess) {
+    //    SendMessage(hKeyboardAccess, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BITMAP_KEYBOARD_ON)));
+    //}
+    //else {
+    //    SendMessage(hKeyboardAccess, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BITMAP_KEYBOARD_OFF)));
+    //}
 }
 
 // Функція для обробки подій вкладки Server
@@ -132,17 +148,31 @@ LRESULT CALLBACK ConnectManagingTabWndProc(HWND hwnd, UINT msg, WPARAM wParam, L
         switch (LOWORD(wParam))
         {
 
-        case 4008:
-        {
-            BOOL isMouseChecked = IsDlgButtonChecked(hwnd, 4008);
-            // реагуйте відповідно
+        case 4008: {  // Флажок миші
+                mouseAccess = !mouseAccess;
+                if (mouseAccess) {
+                    SendMessage(hMouseAccess, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BITMAP_MOUSE_ON)));
+                }
+                else {
+                    SendMessage(hMouseAccess, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BITMAP_MOUSE_OFF)));
+                }
+            }
+        case 4009: {  // Флажок клавіатури
+                keyboardAccess = !keyboardAccess;
+                if (keyboardAccess) {
+                    SendMessage(hKeyboardAccess, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BITMAP_KEYBOARD_ON)));
+                }
+                else {
+                    SendMessage(hKeyboardAccess, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BITMAP_KEYBOARD_OFF)));
+                }
+            }
             break;
-        }
-        case 4009: {
-            BOOL isKeyboardChecked = IsDlgButtonChecked(hwnd, 4009);
-            // реагуйте відповідно
+        case 4006:
+            cleanUnusedPortsAndKeys();
+
+            removeConnection(hwnd, currentUser.login, port);
+            MessageBox(hwnd, L"Закрито з'єднання і очищено таблиці", L"Успіх", MB_OK);
             break;
-        }
     
         }
         break;
@@ -160,16 +190,20 @@ LRESULT CALLBACK ConnectManagingTabWndProc(HWND hwnd, UINT msg, WPARAM wParam, L
         auto sy = [&](int val) { return (int)(val * scaleY); };
 
 
-        MoveWindow(hCloseBtn, sx(370), sy(40), sx(150), sy(25), TRUE);
-        MoveWindow(hDisconnectBtn, sx(370), sy(80), sx(150), sy(25), TRUE);
+        // Перша група — дві кнопки одна на одній (лівий верхній кут)
+        MoveWindow(hCloseBtn, sx(20), sy(20), sx(120), sy(30), TRUE);
+        MoveWindow(hDisconnectBtn, sx(20), sy(60), sx(120), sy(30), TRUE);
 
-        MoveWindow(hGroupBoxAccess, sx(20), sy(50), sx(180), sy(80), TRUE);
-        MoveWindow(hMouseAccess, sx(130), sy(40), sx(150), sy(20), TRUE);
-        MoveWindow(hKeyboardAccess, sx(130), sy(60), sx(150), sy(20), TRUE);
+        // Друга група — теж одна на одній, поруч
+        MoveWindow(hMouseAccess, sx(150), sy(20), sx(80), sy(30), TRUE);
+        MoveWindow(hKeyboardAccess, sx(150), sy(60), sx(80), sy(30), TRUE);
 
-        MoveWindow(hLabelClient, sx(20), sy(190), sx(100), sy(20), TRUE);
-        MoveWindow(hClientEdit, sx(130), sy(190), sx(200), sy(25), TRUE);
-        MoveWindow(hLogEdit, sx(20), sy(210), sx(550), sy(50), TRUE);
+        // Поле для введення клієнта — без змін
+        MoveWindow(hLabelClient, sx(240), sy(20), sx(160), sy(30), TRUE);
+        MoveWindow(hClientEdit, sx(240), sy(40), sx(160), sy(30), TRUE);
+
+        // Лог — без змін
+        MoveWindow(hLogEdit, sx(20), sy(100), sx(550), sy(250), TRUE);
 
         if (hServerFont) DeleteObject(hServerFont);
         int fontSize = min(sx(16), sy(16));
@@ -204,7 +238,7 @@ LRESULT CALLBACK ConnectManagingTabWndProc(HWND hwnd, UINT msg, WPARAM wParam, L
     {
         LPDRAWITEMSTRUCT lpDrawItem = (LPDRAWITEMSTRUCT)lParam;
 
-        if (lpDrawItem->CtlID == 4003) // Якщо це наш кружечок
+        if (hStatusIcon) // Якщо це наш кружечок
         {
             HBRUSH hBrush = CreateSolidBrush(currentStatusColor); // Колір беремо з змінної
             FillRect(lpDrawItem->hDC, &lpDrawItem->rcItem, hBrush);
@@ -263,7 +297,7 @@ LRESULT CALLBACK OpenConnectTabWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
     {
         LPDRAWITEMSTRUCT lpDrawItem = (LPDRAWITEMSTRUCT)lParam;
 
-        if (lpDrawItem->CtlID == 4003) // Якщо це наш кружечок
+        if (hStatusIcon) // Якщо це наш кружечок
         {
             HBRUSH hBrush = CreateSolidBrush(currentStatusColor); // Колір беремо з змінної
             FillRect(lpDrawItem->hDC, &lpDrawItem->rcItem, hBrush);
@@ -294,7 +328,7 @@ LRESULT CALLBACK OpenConnectTabWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
         MoveWindow(hKeyEdit, sx(130), sy(65), sx(300), sy(25), TRUE);
 
         MoveWindow(hStartBtn, sx(20), sy(100), sx(250), sy(25), TRUE);
-        MoveWindow(hStatusIcon, sx(527), sy(3), sx(30), sy(30), TRUE);
+        MoveWindow(hStatusIcon, sx(527), sy(3), 30, 30, TRUE);
 
         if (hServerFont2) DeleteObject(hServerFont2);
         int fontSize = min(sx(16), sy(16));
@@ -420,7 +454,7 @@ void FillKey(HWND hwnd)
     //std::wstring wport = std::to_wstring(port);
     //MessageBox(hwnd, wkey.c_str(), L"Згенерований ключ", MB_OK | MB_ICONINFORMATION);
     //MessageBox(hwnd, wport.c_str(), L"Port", MB_OK | MB_ICONINFORMATION);
-    SetWindowText(GetDlgItem(hwnd, 4005), wkey.c_str());
+    SetWindowText(hKeyEdit, wkey.c_str());
 }
 
 std::string generateKey(const std::string& ip, const std::string& login, int port) {
@@ -476,6 +510,6 @@ void setStatusColor(HWND hwnd, char c) {
     }
 
     // Перемалюємо контрол з ID 4010
-    InvalidateRect(GetDlgItem(hwnd, 4010), NULL, TRUE); // Перемалювання для оновлення
+    InvalidateRect(hStatusIcon, NULL, TRUE); // Перемалювання для оновлення
 }
 

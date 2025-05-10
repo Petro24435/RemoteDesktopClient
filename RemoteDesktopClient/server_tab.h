@@ -11,8 +11,7 @@
 
 // UI параметри для адаптивного масштабування
 #define UI_BASE_WIDTH 600
-#define UI_BASE_HEIGHT 320
-
+#define UI_BASE_HEIGHT 320 
 #define UI_X_MARGIN 20
 #define UI_Y_LINE(n) (20 + 40 * (n))
 #define UI_HEIGHT_LINE 25

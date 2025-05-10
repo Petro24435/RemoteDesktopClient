@@ -146,7 +146,7 @@ void logMessage(HWND hwnd, const std::string& message) {
     //    logFile.close();
     //}
     if (hwnd != NULL) {
-        HWND hStatusEdit = GetDlgItem(hwnd, 4009);
+        HWND hStatusEdit = hLogEdit;
         if (hStatusEdit) {
             int size_needed = MultiByteToWideChar(CP_ACP, 0, message.c_str(), -1, NULL, 0);
             std::wstring wMessage(size_needed, 0);
@@ -322,7 +322,7 @@ void serverThreadFunction(HWND hwnd, std::string serverLogin, int serverPort, st
             if (bytesReceived > 0) {
                 loginBuffer[bytesReceived] = '\0';
                 std::string clientLogin = loginBuffer;
-                SetWindowTextA(GetDlgItem(hwnd, 4006), clientLogin.c_str());
+                SetWindowTextA(hClientEdit, clientLogin.c_str());
             }
 
             // Створення окремого потоку на обробку
@@ -384,7 +384,7 @@ void removeConnection(HWND hwnd, const std::string& serverLogin, int serverPort)
         }
         WSACleanup();
         logMessage(hwnd, "Сервер закрито для порту " + std::to_string(serverPort));
-        setStatusColor(hwnd, 'g');
+        setStatusColor(hwnd, '0');
     }
 }
 
