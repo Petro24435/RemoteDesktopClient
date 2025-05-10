@@ -32,7 +32,7 @@ LRESULT CALLBACK ClientTabWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         break;
 
     case WM_COMMAND:
-        if (LOWORD(wp) == 3004) { // кнопка "Під'єднатись"
+        if (LOWORD(wp) == 3014) { // кнопка "Під'єднатись"
             wchar_t wKey[256], wLogin[256], wPort[256];
             GetWindowText(clientTabData.hwndKey, wKey, 256);
             GetWindowText(clientTabData.hwndLogin, wLogin, 256);
@@ -85,7 +85,7 @@ LRESULT CALLBACK ClientTabWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         }
 
 
-        else if (LOWORD(wp) == 3005) // Кнопка "Від'єднатись"
+        else if (LOWORD(wp) == 3015) // Кнопка "Від'єднатись"
         {
             // Перевіряємо, чи є активне з'єднання
             if (clientSocket != INVALID_SOCKET) {
@@ -143,9 +143,12 @@ void connectToServer(const std::string& serverIp, int serverPort) {
 
     std::atomic<bool> isRunning(true);
     std::thread mouseThread([&]() {
-        POINT lastPos = { 0, 0 };
-        bool lButtonDown = false;
-        bool rButtonDown = false;
+        POINT lastPos = { -1, -1 }; // Щоб точно відправився перший рух
+        bool lButtonPrev = false;
+        bool rButtonPrev = false;
+
+        int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+        int screenHeight = GetSystemMetrics(SM_CYSCREEN);
 
         while (isRunning) {
             POINT pos;
@@ -154,93 +157,71 @@ void connectToServer(const std::string& serverIp, int serverPort) {
             SHORT lState = GetAsyncKeyState(VK_LBUTTON);
             SHORT rState = GetAsyncKeyState(VK_RBUTTON);
 
-            int action = 0;
+            bool lButtonNow = (lState & 0x8000);
+            bool rButtonNow = (rState & 0x8000);
 
-            if (pos.x != lastPos.x || pos.y != lastPos.y) {
-                action = 0; // move
+            bool moved = (pos.x != lastPos.x || pos.y != lastPos.y);
+            bool lChanged = (lButtonNow != lButtonPrev);
+            bool rChanged = (rButtonNow != rButtonPrev);
+
+            if (moved || lChanged || rChanged) {
+                float normX = (float)pos.x / screenWidth;
+                float normY = (float)pos.y / screenHeight;
+
+                // Пакет: тип (1 byte), normX (4 bytes), normY (4 bytes)
+                // тип: 0 - move, 1 - L down, 2 - L up, 3 - R down, 4 - R up
+                uint8_t action = 0;
+
+                if (lChanged) {
+                    action = lButtonNow ? 1 : 2;
+                }
+                else if (rChanged) {
+                    action = rButtonNow ? 3 : 4;
+                }
+                else if (moved) {
+                    action = 0;
+                }
+
+                char buffer[9];
+                buffer[0] = action;
+                memcpy(buffer + 1, &normX, sizeof(float));
+                memcpy(buffer + 5, &normY, sizeof(float));
+
+                send(clientSocket, buffer, sizeof(buffer), 0);
+
+                lastPos = pos;
+                lButtonPrev = lButtonNow;
+                rButtonPrev = rButtonNow;
             }
 
-            if ((lState & 0x8000) && !lButtonDown) {
-                action = 1; // L down
-                lButtonDown = true;
-            }
-            else if (!(lState & 0x8000) && lButtonDown) {
-                action = 2; // L up
-                lButtonDown = false;
-            }
-
-            if ((rState & 0x8000) && !rButtonDown) {
-                action = 3; // R down
-                rButtonDown = true;
-            }
-            else if (!(rState & 0x8000) && rButtonDown) {
-                action = 4; // R up
-                rButtonDown = false;
-            }
-
-            if (action >= 0) {
-                int data[3] = { pos.x, pos.y, action };
-                send(clientSocket, (char*)data, sizeof(data), 0);
-            }
-
-            lastPos = pos;
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            std::this_thread::sleep_for(std::chrono::milliseconds(15));
         }
         });
 
-    cv::namedWindow("Remote Desktop");
-    while (true) {
-        int imgSize = 0;
-        if (recv(clientSocket, (char*)&imgSize, sizeof(imgSize), MSG_WAITALL) <= 0)
-            break;
-
-        std::vector<uchar> imgBuffer(imgSize);
-        int totalReceived = 0;
-        while (totalReceived < imgSize) {
-            int bytes = recv(clientSocket, (char*)imgBuffer.data() + totalReceived, imgSize - totalReceived, 0);
-            if (bytes <= 0) break;
-            totalReceived += bytes;
-        }
-
-        cv::Mat img = cv::imdecode(imgBuffer, cv::IMREAD_COLOR);
-        if (!img.empty()) {
-            cv::imshow("Remote Desktop", img);
-        }
-
-        if (cv::waitKey(30) == 27) {
-            isRunning = false;
-            break;
-        }
-    }
-
-    mouseThread.join();
-    closesocket(clientSocket);
-    WSACleanup();
 }
-
 
 // Функція для малювання елементів вкладки клієнта
 void DrawClientTab(HWND hwnd) {
     CreateWindowEx(0, L"STATIC", L"Ключ:", WS_CHILD | WS_VISIBLE,
         20, 20, 100, 20, hwnd, NULL, NULL, NULL);
     clientTabData.hwndKey = CreateWindowEx(0, L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER,
-        130, 20, 200, 25, hwnd, (HMENU)3001, NULL, NULL);
+        130, 20, 200, 25, hwnd, (HMENU)3011, NULL, NULL);
 
     CreateWindowEx(0, L"STATIC", L"Логін:", WS_CHILD | WS_VISIBLE,
         20, 60, 100, 20, hwnd, NULL, NULL, NULL);
     clientTabData.hwndLogin = CreateWindowEx(0, L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER,
-        130, 60, 200, 25, hwnd, (HMENU)3002, NULL, NULL);
+        130, 60, 200, 25, hwnd, (HMENU)3012, NULL, NULL);
 
     CreateWindowEx(0, L"STATIC", L"Порт:", WS_CHILD | WS_VISIBLE,
         20, 100, 100, 20, hwnd, NULL, NULL, NULL);
     clientTabData.hwndPort = CreateWindowEx(0, L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER,
-        130, 100, 100, 25, hwnd, (HMENU)3003, NULL, NULL);
+        130, 100, 100, 25, hwnd, (HMENU)3013, NULL, NULL);
 
     // Кнопка для під'єднання
     CreateWindowEx(0, L"BUTTON", L"Під'єднатись", WS_CHILD | WS_VISIBLE | WS_BORDER,
-        370, 20, 150, 25, hwnd, (HMENU)3004, NULL, NULL);
+        370, 20, 150, 25, hwnd, (HMENU)3014, NULL, NULL);
     CreateWindowEx(0, L"BUTTON", L"Від'єднатись", WS_CHILD | WS_VISIBLE | WS_BORDER,
-        370, 60, 150, 25, hwnd, (HMENU)3005, NULL, NULL);  // Ідентифікатор кнопки 3005
+        370, 60, 150, 25, hwnd, (HMENU)3015, NULL, NULL);  // Ідентифікатор кнопки 3005
 }
 
 // Ініціалізація вкладки клієнта

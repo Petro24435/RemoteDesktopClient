@@ -20,15 +20,10 @@
 #pragma comment(lib, "User32.lib")
 #pragma comment(lib, "ws2_32.lib")
 
-#define WIDTH 1920
-#define HEIGHT 1080
-#define SCALE 1.5
-#define NEW_WIDTH (WIDTH / SCALE)
-#define NEW_HEIGHT (HEIGHT / SCALE)
-#define PORT 12345
 std::map<int, SOCKET> activeClients; // ключ — порт сервера, значення — клієнтський сокет
 #include "serverUserRegistration.h"
-
+int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+int screenHeight = GetSystemMetrics(SM_CYSCREEN);
 SOCKET serverSocket;
 bool serverRunning = false;  // Флаг для перевірки, чи сервер вже запущений
 
@@ -38,15 +33,15 @@ std::unordered_map<int, bool> keyStates;
 void CaptureScreen(cv::Mat& frame) {
     HDC hScreen = GetDC(NULL);
     HDC hDC = CreateCompatibleDC(hScreen);
-    HBITMAP hBitmap = CreateCompatibleBitmap(hScreen, WIDTH, HEIGHT);
+    HBITMAP hBitmap = CreateCompatibleBitmap(hScreen, screenWidth, screenHeight);
     SelectObject(hDC, hBitmap);
-    BitBlt(hDC, 0, 0, WIDTH, HEIGHT, hScreen, 0, 0, SRCCOPY);
+    BitBlt(hDC, 0, 0, screenWidth, screenHeight, hScreen, 0, 0, SRCCOPY);
 
-    BITMAPINFOHEADER bi = { sizeof(BITMAPINFOHEADER), WIDTH, -HEIGHT, 1, 32, BI_RGB };
-    cv::Mat raw(HEIGHT, WIDTH, CV_8UC4);
-    GetDIBits(hScreen, hBitmap, 0, HEIGHT, raw.data, (BITMAPINFO*)&bi, DIB_RGB_COLORS);
+    BITMAPINFOHEADER bi = { sizeof(BITMAPINFOHEADER), screenWidth, -screenHeight, 1, 32, BI_RGB };
+    cv::Mat raw(screenHeight, screenWidth, CV_8UC4);
+    GetDIBits(hScreen, hBitmap, 0, screenHeight, raw.data, (BITMAPINFO*)&bi, DIB_RGB_COLORS);
 
-    cv::resize(raw, frame, cv::Size(NEW_WIDTH, NEW_HEIGHT));
+    cv::resize(raw, frame, cv::Size(screenWidth, screenHeight));
 
     DeleteObject(hBitmap);
     DeleteDC(hDC);
@@ -54,54 +49,53 @@ void CaptureScreen(cv::Mat& frame) {
 }
 
 
-// Приймаємо координати миші від клієнта та коригуємо їх
-void SimulateMouse(int x, int y, int leftClick, int rightClick) {
-    static int prevLeftClick = 0;
-    static int prevRightClick = 0;
-
+void SimulateMouse(int x, int y, uint8_t action) {
     int screenWidth = GetSystemMetrics(SM_CXSCREEN);
     int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-    int absX = (x * 65535) / screenWidth;
-    int absY = (y * 65535) / screenHeight;
+    int absX = x * screenWidth;
+    int absY = y * screenHeight;
 
-    // Переміщення миші
+    std::vector<INPUT> inputs;
+
+    // Додаємо переміщення (для всіх дій, навіть кліків — щоб були точні координати)
     INPUT move = { 0 };
     move.type = INPUT_MOUSE;
     move.mi.dx = absX;
     move.mi.dy = absY;
     move.mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
-    SendInput(1, &move, sizeof(INPUT));
+    inputs.push_back(move);
 
-    // Зміна стану ЛКМ
-    if (leftClick != prevLeftClick) {
+    // Клік, якщо треба
+    if (action == 1 || action == 2) {
         INPUT click = { 0 };
         click.type = INPUT_MOUSE;
-        click.mi.dwFlags = (leftClick) ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP;
-        SendInput(1, &click, sizeof(INPUT));
-        prevLeftClick = leftClick;
+        click.mi.dwFlags = (action == 1) ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP;
+        inputs.push_back(click);
+    }
+    else if (action == 3 || action == 4) {
+        INPUT click = { 0 };
+        click.type = INPUT_MOUSE;
+        click.mi.dwFlags = (action == 3) ? MOUSEEVENTF_RIGHTDOWN : MOUSEEVENTF_RIGHTUP;
+        inputs.push_back(click);
     }
 
-    // Зміна стану ПКМ
-    if (rightClick != prevRightClick) {
-        INPUT click = { 0 };
-        click.type = INPUT_MOUSE;
-        click.mi.dwFlags = (rightClick) ? MOUSEEVENTF_RIGHTDOWN : MOUSEEVENTF_RIGHTUP;
-        SendInput(1, &click, sizeof(INPUT));
-        prevRightClick = rightClick;
+    // Відправляємо всі дії одразу
+    if (!inputs.empty()) {
+        SendInput(static_cast<UINT>(inputs.size()), inputs.data(), sizeof(INPUT));
     }
 }
 
 
 
-void ProcessMouseData(char* data) {
-    int x, y, leftClick, rightClick;
-    memcpy(&x, data, sizeof(int));
-    memcpy(&y, data + sizeof(int), sizeof(int));
-    memcpy(&leftClick, data + 2 * sizeof(int), sizeof(int));
-    memcpy(&rightClick, data + 3 * sizeof(int), sizeof(int));
-    // Імітуємо натискання миші
-    SimulateMouse(x, y, leftClick, rightClick);
-}
+//void ProcessMouseData(char* data) {
+//    int x, y, leftClick, rightClick;
+//    memcpy(&x, data, sizeof(int));
+//    memcpy(&y, data + sizeof(int), sizeof(int));
+//    memcpy(&leftClick, data + 2 * sizeof(int), sizeof(int));
+//    memcpy(&rightClick, data + 3 * sizeof(int), sizeof(int));
+//    // Імітуємо натискання миші
+//    SimulateMouse(x, y, leftClick, rightClick);
+//}
 
 
 //  Імітація натискання клавіші
@@ -213,26 +207,26 @@ void handleClient(HWND hwnd, SOCKET clientSocket) {
         FD_SET(clientSocket, &readfds);
         timeval timeout{ 0, 1000 };  // 1 мс
 
-        if (select(0, &readfds, nullptr, nullptr, &timeout) > 0) {
-            int data[4];
-            int bytes = recv(clientSocket, (char*)data, sizeof(data), 0);
-            if (bytes == sizeof(data)) {
-                if (data[1] == 0 || data[1] == 1)
-                    SimulateKeyPress(data[0], data[1]);  // клавіатура
-                else
-                    SimulateMouse(data[0], data[1], data[2], data[3]);  // миша
-            }
+        char buffer[9];
+        int received = recv(clientSocket, buffer, 9, MSG_WAITALL);
+        if (received == 9) {
+            uint8_t action = buffer[0];
+            float normX, normY;
+            memcpy(&normX, buffer + 1, sizeof(float));
+            memcpy(&normY, buffer + 5, sizeof(float));
+
+            int x = (int)(normX * screenWidth);
+            int y = (int)(normY * screenHeight);
+
+            SimulateMouse(x, y, action);
         }
+
 
         Sleep(10);  // обмежуємо FPS ~100
     }
 
     closesocket(clientSocket);
 }
-
-
-
-
 
 
 
