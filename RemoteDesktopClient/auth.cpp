@@ -48,7 +48,7 @@ bool Auth::RegisterUser(const std::string& username, const std::string& password
 bool Auth::Authenticate(const std::string& username, const std::string& password) {
     CURL* curl = curl_easy_init();
     if (!curl) {
-        std::cerr << "CURL init failed!" << std::endl;
+        //std::cerr << "CURL init failed!" << std::endl;
         return false;
     }
 
@@ -64,7 +64,7 @@ bool Auth::Authenticate(const std::string& username, const std::string& password
     curl_easy_cleanup(curl);
 
     if (res != CURLE_OK) {
-        std::cerr << "CURL request failed: " << curl_easy_strerror(res) << std::endl;
+        //std::cerr << "CURL request failed: " << curl_easy_strerror(res) << std::endl;
         return false;
     }
 

@@ -12,13 +12,13 @@
 #include <opencv2/opencv.hpp>
 #include "serverUserRegistration.h"
 #include "client_tab.h"
-#include "server_tab.h"
+//#include "server_tab.h"
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "User32.lib")
 
 
 ClientTabData clientTabData;
-
+extern ClientInfo currentClient;
 SOCKET clientSocket = INVALID_SOCKET; // Для з'єднання з сервером
 
 bool decodeKey(const std::string& key, std::string& ipOut, std::string& loginOut, int port);
@@ -66,19 +66,6 @@ LRESULT CALLBACK ClientTabWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                 return 0;
             }
 
-            //// Перевірка наявності з'єднання через FastAPI
-            //std::string url = globalConfig.GetBaseUrl() + "/check_connection/";
-            //std::string checkJson =
-            //    "{\"serverLogin\":\"" + login +
-            //    "\",\"port\":" + std::to_string(port) +
-            //    ",\"serverKey\":\"" + key + "\"}";
-
-            //std::string checkResponse;
-            //if (!PostJson(url, checkJson, checkResponse) || checkResponse != "true") {
-            //    MessageBox(hwnd, L"З'єднання не знайдено в базі!", L"Помилка", MB_ICONERROR);
-            //    return 0;
-            //}
-
             //MessageBox(hwnd, L"Підключення успішне!", L"OK", MB_OK);
 
             // Оновлення з'єднання — додавання клієнта
@@ -87,7 +74,7 @@ LRESULT CALLBACK ClientTabWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                 std::string updateJson =
                     "{\"port\":" + std::to_string(port) +
                     ",\"clientLogin\":\"" + login +
-                    "\",\"clientIp\":\"" + currentUser.ip + "\"}";
+                    "\",\"clientIp\":\"" + currentClient.ip + "\"}";
 
                 std::string updateResponse;
                 PostJson(updateUrl, updateJson, updateResponse);
@@ -129,15 +116,6 @@ LRESULT CALLBACK ClientTabWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
-    case WM_NOTIFY:
-    {
-        LPNMHDR lpnmhdr = (LPNMHDR)lp;
-        if (lpnmhdr->idFrom == 3 || lpnmhdr->code == 4)
-        {
-            SetDlgItemText(hwnd, 3003, bufferPort);
-            SetDlgItemText(hwnd, 3001, bufferKey);
-        }
-    }
     break;
 
     default:

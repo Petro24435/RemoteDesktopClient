@@ -18,7 +18,7 @@ struct FriendInfo {
 
 // Оголошення функцій
 void DrawFriendsTab(HWND hwnd);
-void InitFriendsTab(HWND hwnd);
+void InitLastConnectionsTab(HWND hwnd);
 void LoadFriendsFromCSV(const std::wstring& filename, std::vector<FriendInfo>& friends);
 
 #endif // FRIENDS_TAB_H

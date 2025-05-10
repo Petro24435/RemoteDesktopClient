@@ -13,7 +13,7 @@ void DrawFriendsTab(HWND hwnd) {
         20, 20, 300, 200, hwnd, (HMENU)2001, NULL, NULL);
 
     // Завантажуємо список друзів з CSV файлу
-    LoadFriendsFromCSV(L"friends.csv", friendsList);
+    LoadFriendsFromCSV(L"C:/opencv/friends.csv", friendsList);
 
     // Додаємо дані в список
     for (const auto& friendInfo : friendsList) {
@@ -42,6 +42,6 @@ void LoadFriendsFromCSV(const std::wstring& filename, std::vector<FriendInfo>& f
 }
 
 // Ініціалізація вкладки Friends
-void InitFriendsTab(HWND hwnd) {
+void InitLastConnectionsTab(HWND hwnd) {
     DrawFriendsTab(hwnd);
 }

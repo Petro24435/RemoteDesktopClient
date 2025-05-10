@@ -15,5 +15,6 @@ public:
     static bool ChangePassword(const std::string& username, const std::string& oldPassword, const std::string& newPassword);
 };
 std::string GetLocalIPAddress();
+extern bool serverBool;
 
 #endif // AUTH_H

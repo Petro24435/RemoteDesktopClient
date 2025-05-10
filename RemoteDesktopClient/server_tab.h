@@ -9,6 +9,22 @@
 #include <cstdio>
 #include <set>
 
+// UI параметри для адаптивного масштабування
+#define UI_BASE_WIDTH 600
+#define UI_BASE_HEIGHT 320
+
+#define UI_X_MARGIN 20
+#define UI_Y_LINE(n) (20 + 40 * (n))
+#define UI_HEIGHT_LINE 25
+#define UI_WIDTH_LABEL 100
+#define UI_WIDTH_EDIT 200
+#define UI_WIDTH_BUTTON 150
+
+extern HWND hLabelIp, hIpEdit, hStartBtn, hCloseBtn, hDisconnectBtn, hStatusIcon;
+extern HWND hGroupBoxAccess, hMouseAccess, hKeyboardAccess;
+extern HWND hLabelPort, hPortEdit, hLabelKey, hKeyEdit;
+extern HWND hLabelClient, hClientEdit, hLogEdit;
+
 extern int port;
 static WCHAR bufferPort[256];
 static WCHAR bufferKey[256];
@@ -19,8 +35,10 @@ bool sendAll(SOCKET socket, const char* data, int totalBytes);
 bool recvAll(SOCKET socket, char* buffer, int totalBytes);
 
 
-void DrawServerTab(HWND hwnd);  											// Створює вкладку
-void InitServerTab(HWND hwnd); 												// Ініціалізація DrawST і обробника подій 
+void DrawOpenConnectTab(HWND hwnd);  											// Створює вкладку
+void DrawConnectManagingTab(HWND hwnd);  											// Створює вкладку
+void InitOpenConnectTab(HWND hwnd); 												// Ініціалізація DrawST і обробника подій 
+void InitConnectManagingTab(HWND hwnd); 												// Ініціалізація DrawST і обробника подій 
 void FillPort(HWND hwnd);  													// Шукає вільний і заповнює порт
 void FillKey(HWND hwnd);													// Заповнює поле ключа
 std::string generateKey(const std::string& ip, const std::string& login, int port);	// Генерує ключ методом шифрування

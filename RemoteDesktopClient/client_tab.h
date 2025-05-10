@@ -16,6 +16,13 @@ struct ClientTabData {
 void DrawClientTab(HWND hwnd);
 void InitClientTab(HWND hwnd);
 LRESULT CALLBACK ClientTabWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
+struct ClientInfo {
+    std::string login;
+    std::string password;
+    std::string ip;
+};
+
+extern ClientInfo currentClient;
 
 
 #endif // CLIENT_TAB_H

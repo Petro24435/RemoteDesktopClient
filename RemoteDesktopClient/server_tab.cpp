@@ -13,93 +13,220 @@
 #include <cstdio>
 
 
-int p = 0;
 
 int port;
 extern UserInfo currentUser;
-static HWND hKeyEdit;
-static HWND hPortEdit;
 void savePortsToCSV(const std::set<int>& ports, const std::string& filename);
-// Функція для малювання елементів вкладки Server
-void DrawServerTab(HWND hwnd) {
+extern HWND hLabelIp = NULL; 
+extern HWND hIpEdit = NULL;
+extern HWND hStartBtn = NULL;
+extern HWND hCloseBtn = NULL;
+extern HWND hDisconnectBtn = NULL;
+extern HWND hStatusIcon = NULL;
+extern HWND hGroupBoxAccess = NULL;
+extern HWND hMouseAccess = NULL;
+extern HWND hKeyboardAccess = NULL;
+extern HWND hLabelPort = NULL;
+extern HWND hPortEdit = NULL;
+extern HWND hLabelKey = NULL;
+extern HWND hKeyEdit = NULL;
+extern HWND hLabelClient = NULL;
+extern HWND hClientEdit = NULL;
+extern HWND hLogEdit = NULL;
+static HBRUSH hWhiteBrush = CreateSolidBrush(RGB(255, 255, 255)); // білий фон
+HFONT hServerFont = CreateFont(16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+    DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
+    DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
+HFONT hServerFont2 = CreateFont(16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+    DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
+    DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
+void DrawOpenConnectTab(HWND hwnd) 
+{
     std::wstring wip(currentUser.ip.begin(), currentUser.ip.end());
 
-    // Моя IP адреса
-    CreateWindowEx(0, L"STATIC", L"Моя IP адреса:", WS_CHILD | WS_VISIBLE,
+    hLabelIp = CreateWindowEx(0, L"STATIC", L"Моя IP адреса:", WS_CHILD | WS_VISIBLE,
         20, 20, 100, 20, hwnd, NULL, NULL, NULL);
-    CreateWindowEx(0, L"EDIT", wip.c_str(), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,
+
+    hIpEdit = CreateWindowEx(0, L"EDIT", wip.c_str(), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,
         130, 20, 200, 25, hwnd, (HMENU)4001, NULL, NULL);
-    // Запуск
-    CreateWindowEx(0, L"BUTTON", L"Відкрити сервер", WS_CHILD | WS_VISIBLE | WS_BORDER,
-        370, 20, 150, 25, hwnd, (HMENU)4007, NULL, NULL);
-    // Закрити з'єднання
-    CreateWindowEx(0, L"BUTTON", L"Закрити з'єднання", WS_CHILD | WS_VISIBLE | WS_BORDER,
+
+    hStartBtn = CreateWindowEx(0, L"BUTTON", L"Відкрити сервер", WS_CHILD | WS_VISIBLE | WS_BORDER,\
+        370, 20, 150, 25, hwnd, (HMENU)4002, NULL, NULL);
+
+    //hCloseBtn = CreateWindowEx(0, L"BUTTON", L"Закрити з'єднання", WS_CHILD | WS_VISIBLE | WS_BORDER,\
         370, 60, 150, 25, hwnd, (HMENU)4008, NULL, NULL);
 
-    // Закрити з'єднання
-    CreateWindowEx(0, L"BUTTON", L"<-|->", WS_CHILD | WS_VISIBLE | WS_BORDER,
-        370, 100, 100, 25, hwnd, (HMENU)4011, NULL, NULL);
+    //hDisconnectBtn = CreateWindowEx(0, L"BUTTON", L"Від'єднати Клієнта", WS_CHILD | WS_VISIBLE | WS_BORDER,\
+        370, 100, 150, 25, hwnd, (HMENU)4011, NULL, NULL);
 
-    // Індикатор стану
-    CreateWindowEx(0, L"STATIC", NULL, WS_CHILD | WS_VISIBLE | SS_OWNERDRAW,
-        530, 23, 20, 20, hwnd, (HMENU)4010, NULL, NULL);  
+    hStatusIcon = CreateWindowEx(0, L"STATIC", NULL, WS_CHILD | WS_VISIBLE | SS_OWNERDRAW,
+        530, 23, 20, 20, hwnd, (HMENU)4003, NULL, NULL);
 
-
-    // Рамка
-    CreateWindowEx(0, L"BUTTON", L"Доступ:", WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
+    //hGroupBoxAccess = CreateWindowEx(0, L"STATIC", L"Доступ:", WS_CHILD | WS_VISIBLE ,\
         10, 40, 180, 80, hwnd, NULL, NULL, NULL);
 
-    // Перша кнопка (початок групи)
-    CreateWindowEx(0, L"BUTTON", L"Глядач", WS_CHILD | WS_VISIBLE | BS_RADIOBUTTON | WS_GROUP | WS_TABSTOP,
+    //hMouseAccess = CreateWindowEx(0, L"BUTTON", L"Миша", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,\
         20, 60, 150, 20, hwnd, (HMENU)4002, NULL, NULL);
 
-    // Друга кнопка
-    CreateWindowEx(0, L"BUTTON", L"Повний доступ", WS_CHILD | WS_VISIBLE | BS_RADIOBUTTON,
+    //hKeyboardAccess = CreateWindowEx(0, L"BUTTON", L"Клавіатура", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,\
         20, 90, 150, 20, hwnd, (HMENU)4003, NULL, NULL);
 
-    // Порт
-    CreateWindowEx(0, L"STATIC", L"Порт:", WS_CHILD | WS_VISIBLE,
+    hLabelPort = CreateWindowEx(0, L"STATIC", L"Порт:", WS_CHILD | WS_VISIBLE,
         20, 130, 100, 20, hwnd, NULL, NULL, NULL);
+
     hPortEdit = CreateWindowEx(0, L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER,
         130, 130, 100, 25, hwnd, (HMENU)4004, NULL, NULL);
 
-    // Ключ
-    CreateWindowEx(0, L"STATIC", L"Ключ:", WS_VISIBLE | WS_CHILD,
+    hLabelKey = CreateWindowEx(0, L"STATIC", L"Ключ:", WS_VISIBLE | WS_CHILD,
         20, 170, 100, 20, hwnd, NULL, NULL, NULL);
-    hKeyEdit = CreateWindowEx(0, L"EDIT", NULL, WS_VISIBLE | WS_CHILD | WS_BORDER ,
+
+    hKeyEdit = CreateWindowEx(0, L"EDIT", NULL, WS_VISIBLE | WS_CHILD | WS_BORDER,
         130, 170, 300, 25, hwnd, (HMENU)4005, NULL, NULL);
 
-    // Логін
-    CreateWindowEx(0, L"STATIC", L"Логін:", WS_CHILD | WS_VISIBLE,
+    //hLabelClient = CreateWindowEx(0, L"STATIC", L"Клієнт:", WS_CHILD | WS_VISIBLE,\
         20, 210, 100, 20, hwnd, NULL, NULL, NULL);
-    CreateWindowEx(0, L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,
+
+    //hClientEdit = CreateWindowEx(0, L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,\
         130, 210, 200, 25, hwnd, (HMENU)4006, NULL, NULL);
 
-    //// Стан з'єднання
-    //CreateWindowEx(0, L"STATIC", L"Стан з'єднання:", WS_CHILD | WS_VISIBLE,
-    //    20, 250, 100, 20, hwnd, NULL, NULL, NULL);
-    CreateWindowEx(0, L"EDIT", L"Очікування...", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,
-        20, 250, 550, 50, hwnd, (HMENU)4009, NULL, NULL);
+    //hLogEdit = CreateWindowEx(0, L"EDIT", L"Очікування...", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY | ES_MULTILINE,\
+        20, 220, 550, 50, hwnd, (HMENU)4009, NULL, NULL);
 
     FillPort(hwnd);
     FillKey(hwnd);
 }
 
+void DrawConnectManagingTab(HWND hwnd)
+{
+
+    hCloseBtn = CreateWindowEx(0, L"BUTTON", L"Закрити з'єднання", WS_CHILD | WS_VISIBLE | WS_BORDER,\
+        370, 60, 150, 25, hwnd, (HMENU)4006, NULL, NULL);
+
+    hDisconnectBtn = CreateWindowEx(0, L"BUTTON", L"Від'єднати Клієнта", WS_CHILD | WS_VISIBLE | WS_BORDER,\
+        370, 100, 150, 25, hwnd, (HMENU)4007, NULL, NULL);
+
+    hGroupBoxAccess = CreateWindowEx(0, L"STATIC", L"Доступ:", WS_CHILD | WS_VISIBLE ,\
+        10, 40, 180, 80, hwnd, NULL, NULL, NULL);
+
+    hMouseAccess = CreateWindowEx(0, L"BUTTON", L"Миша", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,\
+        20, 60, 150, 20, hwnd, (HMENU)4008, NULL, NULL);
+
+    hKeyboardAccess = CreateWindowEx(0, L"BUTTON", L"Клавіатура", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,\
+        20, 90, 150, 20, hwnd, (HMENU)4009, NULL, NULL);
+
+    hLabelClient = CreateWindowEx(0, L"STATIC", L"Клієнт:", WS_CHILD | WS_VISIBLE,\
+        20, 210, 100, 20, hwnd, NULL, NULL, NULL);
+
+    hClientEdit = CreateWindowEx(0, L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,\
+        130, 210, 200, 25, hwnd, (HMENU)4010, NULL, NULL);
+
+    hLogEdit = CreateWindowEx(0, L"EDIT", L"Очікування...", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY | ES_MULTILINE,\
+        20, 220, 550, 50, hwnd, (HMENU)4011, NULL, NULL);
+}
+
 // Функція для обробки подій вкладки Server
-LRESULT CALLBACK ServerTabWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK ConnectManagingTabWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
     switch (msg) {
     case WM_COMMAND: {
         switch (LOWORD(wParam))
         {
-        case 4002: // Глядач
-            CheckRadioButton(hwnd, 4002, 4003, 4002);
-            break;
 
-        case 4003: // Повний доступ
-            CheckRadioButton(hwnd, 4002, 4003, 4003);
+        case 4008:
+        {
+            BOOL isMouseChecked = IsDlgButtonChecked(hwnd, 4008);
+            // реагуйте відповідно
             break;
-        
+        }
+        case 4009: {
+            BOOL isKeyboardChecked = IsDlgButtonChecked(hwnd, 4009);
+            // реагуйте відповідно
+            break;
+        }
+    
+        }
+        break;
+    }
+    case WM_SIZE: {
+        // Отримання нових розмірів вікна
+        int width = LOWORD(lParam);
+        int height = HIWORD(lParam);
+
+        // Обчислення масштабу
+        float scaleX = (float)width / UI_BASE_WIDTH;
+        float scaleY = (float)height / UI_BASE_HEIGHT;
+
+        auto sx = [&](int val) { return (int)(val * scaleX); };
+        auto sy = [&](int val) { return (int)(val * scaleY); };
+
+
+        MoveWindow(hCloseBtn, sx(370), sy(40), sx(150), sy(25), TRUE);
+        MoveWindow(hDisconnectBtn, sx(370), sy(80), sx(150), sy(25), TRUE);
+
+        MoveWindow(hGroupBoxAccess, sx(20), sy(50), sx(180), sy(80), TRUE);
+        MoveWindow(hMouseAccess, sx(130), sy(40), sx(150), sy(20), TRUE);
+        MoveWindow(hKeyboardAccess, sx(130), sy(60), sx(150), sy(20), TRUE);
+
+        MoveWindow(hLabelClient, sx(20), sy(190), sx(100), sy(20), TRUE);
+        MoveWindow(hClientEdit, sx(130), sy(190), sx(200), sy(25), TRUE);
+        MoveWindow(hLogEdit, sx(20), sy(210), sx(550), sy(50), TRUE);
+
+        if (hServerFont) DeleteObject(hServerFont);
+        int fontSize = min(sx(16), sy(16));
+        hServerFont = CreateFont(fontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+            DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
+            DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
+
+        HWND controls[] = {
+            hCloseBtn, hDisconnectBtn,
+            hGroupBoxAccess, hMouseAccess, hKeyboardAccess,
+            hLabelClient, hClientEdit, hLogEdit,
+        };
+
+        for (HWND ctrl : controls) {
+            SendMessage(ctrl, WM_SETFONT, (WPARAM)hServerFont, TRUE);
+        }
+        break;
+    }
+    case WM_CTLCOLORSTATIC:
+    case WM_CTLCOLORBTN:
+    {
+        HDC hdcStatic = (HDC)wParam;
+        SetBkMode(hdcStatic, TRANSPARENT); // фон прозорий
+        SetBkColor(hdcStatic, RGB(255, 255, 255)); // білий фон
+        return (INT_PTR)hWhiteBrush;
+    }
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+
+    case WM_DRAWITEM:
+    {
+        LPDRAWITEMSTRUCT lpDrawItem = (LPDRAWITEMSTRUCT)lParam;
+
+        if (lpDrawItem->CtlID == 4003) // Якщо це наш кружечок
+        {
+            HBRUSH hBrush = CreateSolidBrush(currentStatusColor); // Колір беремо з змінної
+            FillRect(lpDrawItem->hDC, &lpDrawItem->rcItem, hBrush);
+            DeleteObject(hBrush);
+            return TRUE;
+        }
+    }
+
+    break;
+
+    default:
+        return DefWindowProc(hwnd, msg, wParam, lParam);
+    }
+}
+
+// Функція для обробки подій вкладки Server
+LRESULT CALLBACK OpenConnectTabWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+
+    switch (msg) {
+    case WM_COMMAND: {
+        switch (LOWORD(wParam))
+        {
         case 4004:
             if (HIWORD(wParam) == EN_CHANGE) {
                 wchar_t buffer[16]; // до 5 цифр + запас
@@ -108,7 +235,7 @@ LRESULT CALLBACK ServerTabWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
                 FillKey(hwnd);
             }
             break;
-        case 4007: {
+        case 4002: {
             wchar_t portBuffer[256];
             GetWindowText(hPortEdit, portBuffer, 256);
             std::wstring wport(portBuffer);
@@ -125,32 +252,7 @@ LRESULT CALLBACK ServerTabWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
             MessageBox(hwnd, L"Сервер відкрито", L"Успіх", MB_OK);
             break;
         }
-        case 4008:
-            cleanUnusedPortsAndKeys();
-            
-            removeConnection(hwnd, currentUser.login, port);
-            MessageBox(hwnd, L"Закрито з'єднання і очищено таблиці", L"Успіх", MB_OK);
-            setStatusColor(hwnd, '0');
-            break;
-
-        case 4011:
-            // Отримуємо текст з 4004 і передаємо в 3003
-
-            GetDlgItemText(hwnd, 4004, bufferPort, sizeof(bufferPort) / sizeof(WCHAR));
-            // Отримуємо текст з 4005 і передаємо в 3001
-            GetDlgItemText(hwnd, 4005, bufferKey, sizeof(bufferKey) / sizeof(WCHAR));
-            disconnectClient(hwnd, port);
-            break;
-
-
-
         }
-
-        break;
-    }
-    case WM_CREATE: {
-        // Пошук дескриптора поля для ключа
-        //hKeyEdit = GetDlgItem(hwnd, 4005);
         break;
     }
     case WM_DESTROY:
@@ -161,7 +263,7 @@ LRESULT CALLBACK ServerTabWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
     {
         LPDRAWITEMSTRUCT lpDrawItem = (LPDRAWITEMSTRUCT)lParam;
 
-        if (lpDrawItem->CtlID == 4010) // Якщо це наш кружечок
+        if (lpDrawItem->CtlID == 4003) // Якщо це наш кружечок
         {
             HBRUSH hBrush = CreateSolidBrush(currentStatusColor); // Колір беремо з змінної
             FillRect(lpDrawItem->hDC, &lpDrawItem->rcItem, hBrush);
@@ -169,7 +271,55 @@ LRESULT CALLBACK ServerTabWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
             return TRUE;
         }
     }
+    case WM_SIZE: {
+        // Отримання нових розмірів вікна
+        int width = LOWORD(lParam);
+        int height = HIWORD(lParam);
 
+        // Обчислення масштабу
+        float scaleX = (float)width / UI_BASE_WIDTH;
+        float scaleY = (float)height / UI_BASE_HEIGHT;
+
+        auto sx = [&](int val) { return (int)(val * scaleX); };
+        auto sy = [&](int val) { return (int)(val * scaleY); };
+
+        // Масштабування елементів на вкладках
+        MoveWindow(hLabelIp, sx(20), sy(0), sx(100), sy(20), TRUE);
+        MoveWindow(hIpEdit, sx(130), sy(0), sx(200), sy(25), TRUE);
+
+
+        MoveWindow(hLabelPort, sx(20), sy(30), sx(100), sy(20), TRUE);
+        MoveWindow(hPortEdit, sx(130), sy(30), sx(100), sy(25), TRUE);
+        MoveWindow(hLabelKey, sx(20), sy(65), sx(100), sy(20), TRUE);
+        MoveWindow(hKeyEdit, sx(130), sy(65), sx(300), sy(25), TRUE);
+
+        MoveWindow(hStartBtn, sx(20), sy(100), sx(250), sy(25), TRUE);
+        MoveWindow(hStatusIcon, sx(527), sy(3), sx(30), sy(30), TRUE);
+
+        if (hServerFont2) DeleteObject(hServerFont2);
+        int fontSize = min(sx(16), sy(16));
+        hServerFont2 = CreateFont(fontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+            DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
+            DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
+
+        HWND controls[] = {
+            hLabelIp, hIpEdit, hStartBtn, hStatusIcon,
+            hLabelPort, hPortEdit, hLabelKey, hKeyEdit,
+        };
+
+        for (HWND ctrl : controls) {
+            SendMessage(ctrl, WM_SETFONT, (WPARAM)hServerFont2, TRUE);
+        }
+        break;
+    }
+    case WM_CTLCOLORSTATIC:
+    case WM_CTLCOLORBTN:
+    {
+        HDC hdcStatic = (HDC)wParam;
+        SetBkMode(hdcStatic, TRANSPARENT); // фон прозорий
+        SetBkColor(hdcStatic, RGB(255, 255, 255)); // білий фон
+        return (INT_PTR)hWhiteBrush;
+    }
     break;
 
     default:
@@ -179,11 +329,19 @@ LRESULT CALLBACK ServerTabWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 }
 
 // Ініціалізація вкладки Server
-void InitServerTab(HWND hwnd) {
-    DrawServerTab(hwnd);
+void InitOpenConnectTab(HWND hwnd) {
+    DrawOpenConnectTab(hwnd);
         currentStatusColor = RGB(192, 192, 192);
     // Встановлюємо процедуру обробки подій для вкладки
-    SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)ServerTabWndProc);
+    SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)OpenConnectTabWndProc);
+}
+
+// Ініціалізація вкладки Server
+void InitConnectManagingTab(HWND hwnd) {
+    DrawConnectManagingTab(hwnd);
+        currentStatusColor = RGB(192, 192, 192);
+    // Встановлюємо процедуру обробки подій для вкладки
+    SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)ConnectManagingTabWndProc);
 }
 
 
@@ -264,8 +422,6 @@ void FillKey(HWND hwnd)
     //MessageBox(hwnd, wport.c_str(), L"Port", MB_OK | MB_ICONINFORMATION);
     SetWindowText(GetDlgItem(hwnd, 4005), wkey.c_str());
 }
-
-
 
 std::string generateKey(const std::string& ip, const std::string& login, int port) {
     std::ostringstream keyStream;

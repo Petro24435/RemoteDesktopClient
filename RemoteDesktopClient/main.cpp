@@ -5,17 +5,27 @@
 #include <string>
 #include <iostream>
 #include <sstream>
-
 HINSTANCE hInst;
 Auth auth; // Додаємо змінну для перевірки статусу логіну
-//// Обробка повідомлень для головного вікна
-//LRESULT CALLBACK WndProcMainMenu(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
+// Обробка повідомлень для головного вікна
+//LRESULT CALLBACK WndProcLogin(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 //    switch (msg) {
 //    case WM_CREATE:
 //        CreateWindowEx(0, L"STATIC", L"Welcome to the main menu!", WS_VISIBLE | WS_CHILD,
 //            20, 20, 300, 30, hwnd, NULL, NULL, NULL);
 //        break;
 //
+//    case WM_COMMAND:
+//        switch (LOWORD(wp))
+//        {
+//        case IDC_RADIO_SERVER: // Глядач
+//            
+//            break;
+//
+//        case IDC_RADIO_CLIENT: // Повний доступ
+//            
+//            break;
+//        }
 //    case WM_DESTROY:
 //        PostQuitMessage(0);
 //        break;
@@ -26,14 +36,24 @@ Auth auth; // Додаємо змінну для перевірки статусу логіну
 
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow) {
     hInst = hInstance;
+    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
 
-    // Реєстрація класу для головного вікна
-    WNDCLASS wcMainMenu = { 0 };
-    wcMainMenu.lpfnWndProc = MainWndProcMenu;
-    wcMainMenu.hInstance = hInstance;
-    wcMainMenu.lpszClassName = L"MainAppWindowClass";
-    wcMainMenu.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-    RegisterClass(&wcMainMenu);
+    // Реєстрація класу для Client вікна
+    WNDCLASS wcClientMenu = { 0 };
+    wcClientMenu.lpfnWndProc = ClientWndProcMenu;
+    wcClientMenu.hInstance = hInstance;
+    wcClientMenu.lpszClassName = L"ClientAppWindowClass";
+    wcClientMenu.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    RegisterClass(&wcClientMenu);
+
+    // Реєстрація класу для Server вікна
+    WNDCLASS wcServerMenu = { 0 };
+    wcServerMenu.lpfnWndProc = ServerWndProcMenu;
+    wcServerMenu.hInstance = hInstance;
+    wcServerMenu.lpszClassName = L"ServerAppWindowClass";
+    wcServerMenu.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    RegisterClass(&wcServerMenu);
 
 
     // Реєстрація класу для логіну
@@ -82,26 +102,52 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
         // Якщо логін успішний (loginSuccessful == true), створюємо нове вікно і закриваємо старе
         if (loginSuccessful) {
             ShowWindow(hwndLogin, SW_HIDE); // Закриваємо вікно логіну
+            if (serverBool) {
 
-            // Створення головного вікна
-            HWND hwndMainMenu = CreateWindowEx(
-                0,
-                L"MainAppWindowClass",  // Використовуємо зареєстрований клас для головного вікна
-                L"Main Menu",
-                WS_OVERLAPPEDWINDOW,
-                CW_USEDEFAULT, CW_USEDEFAULT, 600, 400,
-                NULL, NULL, hInst, NULL
-            );
 
-            if (!hwndMainMenu) {
-                DWORD dwError = GetLastError();
-                MessageBox(NULL, L"Failed to create main menu window!", L"Error", MB_OK | MB_ICONERROR);
-                return -1;
+                // Створення головного вікна
+                HWND hwndServerMenu = CreateWindowEx(
+                    0,
+                    L"ServerAppWindowClass",  // Використовуємо зареєстрований клас для головного вікна
+                    L"Server Menu",
+                    WS_OVERLAPPEDWINDOW,  // без рамки, кнопок і заголовка
+                    CW_USEDEFAULT, CW_USEDEFAULT,      // координати верхнього лівого кута
+                    screenWidth, screenHeight,  // розмір вікна на весь екран
+                    NULL, NULL, hInst, NULL
+                );
+
+                if (!hwndServerMenu) {
+                    DWORD dwError = GetLastError();
+                    MessageBox(NULL, L"Failed to create main menu window!", L"Error", MB_OK | MB_ICONERROR);
+                    return -1;
+                }
+
+                // Показуємо головне вікно
+                ShowWindow(hwndServerMenu, SW_MAXIMIZE);
+                UpdateWindow(hwndServerMenu);
             }
+            else
+            {
+                // Створення головного вікна
+                HWND hwndClientMenu = CreateWindowEx(
+                    0,
+                    L"ClientAppWindowClass",  // Використовуємо зареєстрований клас для головного вікна
+                    L"Client Menu",
+                    WS_OVERLAPPEDWINDOW,
+                    CW_USEDEFAULT, CW_USEDEFAULT, 600, 400,
+                    NULL, NULL, hInst, NULL
+                );
 
-            // Показуємо головне вікно
-            ShowWindow(hwndMainMenu, nCmdShow);
-            UpdateWindow(hwndMainMenu);
+                if (!hwndClientMenu) {
+                    DWORD dwError = GetLastError();
+                    MessageBox(NULL, L"Failed to create main menu window!", L"Error", MB_OK | MB_ICONERROR);
+                    return -1;
+                }
+
+                // Показуємо головне вікно
+                ShowWindow(hwndClientMenu, nCmdShow);
+                UpdateWindow(hwndClientMenu);
+            }
             
             // Перериваємо цикл обробки повідомлень для логіну
             break;

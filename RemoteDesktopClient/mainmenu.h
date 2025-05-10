@@ -6,16 +6,23 @@
 #include <windows.h>
 
 // Функція для додавання вкладок
-void AddTabs(HWND hwnd);
+void AddTabsClient(HWND hwnd);
 
 // Ініціалізація вкладок
-void InitTabs(HWND hwnd);
+void InitTabsClient(HWND hwnd);
+
+// Функція для додавання вкладок
+void AddTabsServer(HWND hwnd);
+
+// Ініціалізація вкладок
+void InitTabsServer(HWND hwnd);
 
 // Функція для перемикання вкладок
 void ShowTab(int index);
 
 // Основний обробник вікна
-LRESULT CALLBACK MainWndProcMenu(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
+LRESULT CALLBACK ClientWndProcMenu(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
+LRESULT CALLBACK ServerWndProcMenu(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 
 void InitMainWindow(HINSTANCE hInstance);
 #endif // MAINMENU_H

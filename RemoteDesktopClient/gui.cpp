@@ -6,13 +6,16 @@
 #include "auth.h"
 #include "user.h"
 #include "main.h"
+#include "client_tab.h"
 #pragma comment(lib, "ws2_32.lib")
 
 
+extern bool serverBool = false;
 extern bool loginSuccessful = false;
 extern Auth auth;
 extern HINSTANCE hInst;
 UserInfo currentUser;
+ClientInfo currentClient;
 HWND hwndLabelUsername, hwndEditUsername;
 HWND hwndLabelPassword, hwndEditPassword;
 HWND hwndButtonLogin, hwndButtonRegister;
@@ -23,21 +26,6 @@ LRESULT CALLBACK WndProcLogin(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 
 // Контроли логіну
 void CreateControls(HWND hwnd) {
-    //CreateWindowEx(0, L"STATIC", L"Username:", WS_VISIBLE | WS_CHILD,
-    //    20, 50, 100, 25, hwnd, (HMENU)1, NULL, NULL);
-    //hUsernameEdit = CreateWindowEx(0, L"EDIT", NULL, WS_VISIBLE | WS_CHILD | WS_BORDER,
-    //    130, 50, 200, 25, hwnd, (HMENU)2, NULL, NULL);
-
-    //CreateWindowEx(0, L"STATIC", L"Password:", WS_VISIBLE | WS_CHILD,
-    //    20, 90, 100, 25, hwnd, (HMENU)3, NULL, NULL);
-    //hPasswordEdit = CreateWindowEx(0, L"EDIT", NULL, WS_VISIBLE | WS_CHILD | WS_BORDER | ES_PASSWORD,
-    //    130, 90, 200, 25, hwnd, (HMENU)4, NULL, NULL);
-
-    //CreateWindowEx(0, L"BUTTON", L"Login", WS_VISIBLE | WS_CHILD,
-    //    130, 130, 100, 30, hwnd, (HMENU)5, NULL, NULL);
-    //CreateWindowEx(0, L"BUTTON", L"Register", WS_VISIBLE | WS_CHILD,
-    //    240, 130, 100, 30, hwnd, (HMENU)6, NULL, NULL);
-
     CreateWindowEx(0, L"STATIC", L"Підключитися як:", WS_CHILD | WS_VISIBLE,
         0, 0, 0, 0, hwnd, (HMENU)IDC_LABEL_ROLE, NULL, NULL);
 
@@ -117,6 +105,7 @@ LRESULT CALLBACK WndProcLogin(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                     currentUser.login = strUsername;
                     currentUser.password = strPassword;
                     currentUser.ip = GetLocalIPAddress();
+                    currentClient.ip = currentUser.ip;
 
                     MessageBox(hwnd, L"Login successful!", L"Success", MB_OK);
                 }
@@ -132,6 +121,14 @@ LRESULT CALLBACK WndProcLogin(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                     MessageBox(hwnd, L"Registration failed or user already exists!", L"Error", MB_OK | MB_ICONERROR);
                 }
             }
+        }
+        else if(LOWORD(wp) == IDC_RADIO_SERVER)
+        {
+            serverBool = true;
+        }
+        else if(LOWORD(wp) == IDC_RADIO_CLIENT)
+        {
+            serverBool = false;
         }
         break;
     }
