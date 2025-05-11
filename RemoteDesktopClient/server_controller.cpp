@@ -26,7 +26,7 @@ int screenWidth = GetSystemMetrics(SM_CXSCREEN);
 int screenHeight = GetSystemMetrics(SM_CYSCREEN);
 SOCKET serverSocket;
 bool serverRunning = false;  // Флаг для перевірки, чи сервер вже запущений
-
+void logMessage(HWND hwnd, const std::string& message);
 std::unordered_map<int, bool> keyStates;
 
 //  Зняття скріншоту
@@ -51,16 +51,16 @@ void CaptureScreen(cv::Mat& frame) {
 void SimulateMouse(int x, int y, uint8_t action) {
     int screenWidth = GetSystemMetrics(SM_CXSCREEN);
     int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-    int absX = x *  screenWidth;
+    int absX = x * screenWidth;
     int absY = y * screenHeight;
-
+    logMessage(NULL, std::to_string(absX));
     INPUT input = { 0 };
     input.type = INPUT_MOUSE;
     input.mi.dx = absX;
     input.mi.dy = absY;
     input.mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
     SendInput(1, &input, sizeof(INPUT));
-
+    
     INPUT click = { 0 };
     click.type = INPUT_MOUSE;
 

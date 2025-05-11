@@ -218,6 +218,9 @@ void connectToServer(const std::string& serverIp, int serverPort) {
         int frameCount = 0;
         float fps = 0.0f;
 
+        const std::string windowName = "Remote Screen";
+        cv::namedWindow(windowName, cv::WINDOW_NORMAL);
+
         while (isRunning) {
             int imgSize = 0;
             int received = recv(clientSocket, (char*)&imgSize, sizeof(imgSize), MSG_WAITALL);
@@ -242,6 +245,7 @@ void connectToServer(const std::string& serverIp, int serverPort) {
             cv::Mat img = cv::imdecode(imgData, cv::IMREAD_COLOR);
             if (img.empty()) continue;
 
+            // FPS
             frameCount++;
             auto now = high_resolution_clock::now();
             auto duration = duration_cast<milliseconds>(now - lastTime);
@@ -251,16 +255,21 @@ void connectToServer(const std::string& serverIp, int serverPort) {
                 lastTime = now;
             }
 
-            std::string title = "Remote Screen - FPS: " + std::to_string(static_cast<int>(fps));
-            cv::imshow(title, img);
-            if (cv::waitKey(1) == 27) { // натисни Esc для виходу
+            // Малюємо FPS як текст
+            std::string fpsText = "FPS: " + std::to_string(static_cast<int>(fps));
+            cv::putText(img, fpsText, cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 0.9, cv::Scalar(0, 255, 0), 2);
+
+            // Показуємо зображення в одному вікні
+            cv::imshow(windowName, img);
+            if (cv::waitKey(1) == 27) { // Esc
                 isRunning = false;
                 break;
             }
         }
 
-        cv::destroyAllWindows();
+        cv::destroyWindow(windowName);
         });
+
 
     // Очікуємо завершення
     imageThread.join();
