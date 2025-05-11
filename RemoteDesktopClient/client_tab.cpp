@@ -118,7 +118,7 @@ LRESULT CALLBACK ClientTabWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
-    break;
+        break;
 
     default:
         return DefWindowProc(hwnd, msg, wp, lp);
@@ -157,18 +157,40 @@ void connectToServer(const std::string& serverIp, int serverPort) {
     // Надсилаємо логін
     send(clientSocket, currentUser.login.c_str(), currentUser.login.size(), 0);
 
+    const std::string windowName = "Remote Screen";
+
+    cv::namedWindow(windowName, cv::WINDOW_NORMAL);
+    cv::resizeWindow(windowName, 1280, 720);
+
     // Потік передачі миші
     std::thread mouseThread([&]() {
         POINT lastPos = { -1, -1 };
         bool lButtonPrev = false;
         bool rButtonPrev = false;
 
-        int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-        int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-
         while (isRunning) {
-            POINT pos;
-            GetCursorPos(&pos);
+            POINT cursorPos;
+            GetCursorPos(&cursorPos);
+
+            HWND hwnd = FindWindowA(NULL, windowName.c_str());
+            if (!hwnd) continue;
+
+            RECT windowRect;
+            GetWindowRect(hwnd, &windowRect);
+
+            RECT clientRect;
+            GetClientRect(hwnd, &clientRect);
+            int winW = clientRect.right;
+            int winH = clientRect.bottom;
+
+            // Переведення курсора у координати вікна
+            int x = cursorPos.x - windowRect.left;
+            int y = cursorPos.y - windowRect.top - (GetSystemMetrics(SM_CYCAPTION)); // врахування заголовка
+
+            if (x < 0 || y < 0 || x >= winW || y >= winH) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(15));
+                continue;
+            }
 
             SHORT lState = GetAsyncKeyState(VK_LBUTTON);
             SHORT rState = GetAsyncKeyState(VK_RBUTTON);
@@ -176,24 +198,18 @@ void connectToServer(const std::string& serverIp, int serverPort) {
             bool lButtonNow = (lState & 0x8000);
             bool rButtonNow = (rState & 0x8000);
 
-            bool moved = (pos.x != lastPos.x || pos.y != lastPos.y);
+            bool moved = (x != lastPos.x || y != lastPos.y);
             bool lChanged = (lButtonNow != lButtonPrev);
             bool rChanged = (rButtonNow != rButtonPrev);
 
             if (moved || lChanged || rChanged) {
-                float normX = (float)pos.x / screenWidth;
-                float normY = (float)pos.y / screenHeight;
+                float normX = (float)x / winW;
+                float normY = (float)y / winH;
 
                 uint8_t action = 0;
-                if (lChanged) {
-                    action = lButtonNow ? 1 : 2;
-                }
-                else if (rChanged) {
-                    action = rButtonNow ? 3 : 4;
-                }
-                else if (moved) {
-                    action = 0;
-                }
+                if (lChanged) action = lButtonNow ? 1 : 2;
+                else if (rChanged) action = rButtonNow ? 3 : 4;
+                else if (moved) action = 0;
 
                 char buffer[9];
                 buffer[0] = action;
@@ -202,7 +218,7 @@ void connectToServer(const std::string& serverIp, int serverPort) {
 
                 send(clientSocket, buffer, sizeof(buffer), 0);
 
-                lastPos = pos;
+                lastPos = { x, y };
                 lButtonPrev = lButtonNow;
                 rButtonPrev = rButtonNow;
             }
@@ -221,10 +237,16 @@ void connectToServer(const std::string& serverIp, int serverPort) {
         const std::string windowName = "Remote Screen";
         cv::namedWindow(windowName, cv::WINDOW_NORMAL);
 
+        HWND hwnd = FindWindowA(NULL, windowName.c_str());
+        if (hwnd != NULL) {
+            SetWindowPos(hwnd, HWND_TOPMOST, 100, 100, 1280, 720, SWP_SHOWWINDOW);
+        }
+
         while (isRunning) {
             int imgSize = 0;
             int received = recv(clientSocket, (char*)&imgSize, sizeof(imgSize), MSG_WAITALL);
-            if (received <= 0 || imgSize <= 0) {
+            imgSize = ntohl(imgSize);
+            if (received != sizeof(imgSize) || imgSize <= 0) {
                 isRunning = false;
                 break;
             }
@@ -241,7 +263,6 @@ void connectToServer(const std::string& serverIp, int serverPort) {
             }
 
             if (!isRunning) break;
-
             cv::Mat img = cv::imdecode(imgData, cv::IMREAD_COLOR);
             if (img.empty()) continue;
 
@@ -255,13 +276,15 @@ void connectToServer(const std::string& serverIp, int serverPort) {
                 lastTime = now;
             }
 
-            // Малюємо FPS як текст
+            // Малюємо FPS
             std::string fpsText = "FPS: " + std::to_string(static_cast<int>(fps));
             cv::putText(img, fpsText, cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 0.9, cv::Scalar(0, 255, 0), 2);
 
-            // Показуємо зображення в одному вікні
+            // Відображаємо зображення без масштабування
             cv::imshow(windowName, img);
-            if (cv::waitKey(1) == 27) { // Esc
+            int key = cv::waitKey(1);
+
+            if (key == 27) {
                 isRunning = false;
                 break;
             }
@@ -270,15 +293,24 @@ void connectToServer(const std::string& serverIp, int serverPort) {
         cv::destroyWindow(windowName);
         });
 
+    // Важливо викликати join для всіх потоків
+    imageThread.detach();
+    mouseThread.detach();
 
-    // Очікуємо завершення
-    imageThread.join();
-    isRunning = false;
-    mouseThread.join();
+    // Перевірка для коректного завершення роботи
+    while (isRunning) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
 
     closesocket(clientSocket);
     WSACleanup();
 }
+
+
+
+
+
+
 
 
 // Функція для малювання елементів вкладки клієнта

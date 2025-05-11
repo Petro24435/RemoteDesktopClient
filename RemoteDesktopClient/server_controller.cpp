@@ -81,7 +81,12 @@ void SimulateMouse(int x, int y, uint8_t action) {
         SendInput(1, &click, sizeof(INPUT));
     }
 }
-
+        break;
+    }
+}
+        break;
+    }
+}
 
 
 
@@ -95,8 +100,6 @@ void SimulateMouse(int x, int y, uint8_t action) {
 //    // Імітуємо натискання миші
 //    SimulateMouse(x, y, leftClick, rightClick);
 //}
-
-
 //  Імітація натискання клавіші
 void SimulateKeyPress(int key, bool isPressed) {
     INPUT input = { 0 };
@@ -149,6 +152,63 @@ void logMessage(HWND hwnd, const std::string& message) {
     }
 }
 
+
+//  Зняття скріншоту
+void CaptureScreen(cv::Mat& frame) {
+    HDC hScreen = GetDC(NULL);
+    HDC hDC = CreateCompatibleDC(hScreen);
+    HBITMAP hBitmap = CreateCompatibleBitmap(hScreen, screenWidth, screenHeight);
+    SelectObject(hDC, hBitmap);
+    BitBlt(hDC, 0, 0, screenWidth, screenHeight, hScreen, 0, 0, SRCCOPY);
+
+    BITMAPINFOHEADER bi = { sizeof(BITMAPINFOHEADER), screenWidth, -screenHeight, 1, 32, BI_RGB };
+    cv::Mat raw(screenHeight, screenWidth, CV_8UC4);
+    GetDIBits(hDC, hBitmap, 0, screenHeight, raw.data, (BITMAPINFO*)&bi, DIB_RGB_COLORS);
+
+    cv::resize(raw, frame, cv::Size(screenWidth, screenHeight));
+
+    DeleteObject(hBitmap);
+    DeleteDC(hDC);
+    ReleaseDC(NULL, hScreen);
+}
+
+void SimulateMouse(int x, int y, uint8_t action) {
+    int absX = (x * 65535) / screenWidth;
+    int absY = (y * 65535) / screenHeight;
+    std::string test1 = "pizda absX =" + std::to_string(absX);
+    logMessage(NULL, test1);
+    INPUT input = { 0 };
+    input.type = INPUT_MOUSE;
+    input.mi.dx = absX;
+    input.mi.dy = absY;
+    input.mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
+    SendInput(1, &input, sizeof(INPUT));
+    
+    INPUT click = { 0 };
+    click.type = INPUT_MOUSE;
+
+    switch (action) {
+    case 1: // Left down
+        click.mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+        SendInput(1, &click, sizeof(INPUT));
+        break;
+    case 2: // Left up
+        click.mi.dwFlags = MOUSEEVENTF_LEFTUP;
+        SendInput(1, &click, sizeof(INPUT));
+        break;
+    case 3: // Right down
+        click.mi.dwFlags = MOUSEEVENTF_RIGHTDOWN;
+        SendInput(1, &click, sizeof(INPUT));
+        break;
+    case 4: // Right up
+        click.mi.dwFlags = MOUSEEVENTF_RIGHTUP;
+        SendInput(1, &click, sizeof(INPUT));
+        break;
+    default:
+        break;
+    }
+}
+
 bool initializeServer(HWND hwnd, const std::string& serverIp, int serverPort) {
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
@@ -193,9 +253,9 @@ bool initializeServer(HWND hwnd, const std::string& serverIp, int serverPort) {
 void handleClient(HWND hwnd, SOCKET clientSocket) {
     std::atomic<bool> running = true;
 
-    // Потік обробки миші
-    std::thread mouseRecvThread([&]() {
-        int lastX = -1, lastY = -1;
+        int imgSize = static_cast<int>(buffer.size());
+        if (send(clientSocket, (char*)&imgSize, sizeof(imgSize), 0) == SOCKET_ERROR) break;
+        if (send(clientSocket, reinterpret_cast<char*>(buffer.data()), imgSize, 0) == SOCKET_ERROR) break;
 
         while (running) {
             char recvBuf[9];
@@ -234,7 +294,8 @@ void handleClient(HWND hwnd, SOCKET clientSocket) {
         if (send(clientSocket, (char*)&imgSize, sizeof(imgSize), 0) == SOCKET_ERROR) break;
         if (send(clientSocket, reinterpret_cast<char*>(buffer.data()), imgSize, 0) == SOCKET_ERROR) break;
 
-        Sleep(10);  // ~100 FPS
+        Sleep(30);  // 33 FPS
+
     }
 
     running = false;
