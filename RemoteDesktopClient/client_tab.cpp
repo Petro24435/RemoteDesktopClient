@@ -290,7 +290,8 @@ void connectToServer(const std::string& serverIp, int serverPort) {
             int winH = clientRect.bottom;
 
             if (winW > 0 && winH > 0) {
-                cv::resize(img, img, cv::Size(winW, winH));
+                // Масштабування за допомогою OpenCV (найпростіший варіант)
+                cv::resize(img, img, cv::Size(winW, winH), 0, 0, cv::INTER_LINEAR);
             }
 
             cv::imshow(windowName, img);
@@ -312,6 +313,8 @@ void connectToServer(const std::string& serverIp, int serverPort) {
     closesocket(clientSocket);
     WSACleanup();
 }
+
+
 
 
 
