@@ -280,17 +280,7 @@ void connectToServer(const std::string& serverIp, int serverPort) {
             std::string fpsText = "FPS: " + std::to_string(static_cast<int>(fps));
             cv::putText(img, fpsText, cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 0.9, cv::Scalar(0, 255, 0), 2);
 
-            // Масштаб зображення під поточне вікно
-            RECT clientRect;
-            GetClientRect(hwnd, &clientRect);
-            int winW = clientRect.right;
-            int winH = clientRect.bottom;
-
-            if (winW > 0 && winH > 0) {
-                // Масштабування за допомогою OpenCV (найпростіший варіант)
-                cv::resize(img, img, cv::Size(winW, winH), 0, 0, cv::INTER_LINEAR);
-            }
-
+            // Відображаємо зображення без масштабування
             cv::imshow(windowName, img);
             int key = cv::waitKey(1);
 
@@ -315,6 +305,7 @@ void connectToServer(const std::string& serverIp, int serverPort) {
     closesocket(clientSocket);
     WSACleanup();
 }
+
 
 
 
