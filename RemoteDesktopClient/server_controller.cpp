@@ -23,7 +23,7 @@
 std::map<int, SOCKET> activeClients; // ключ — порт сервера, значення — клієнтський сокет
 #include "serverUserRegistration.h"
 int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+int screenHeight =  GetSystemMetrics(SM_CYSCREEN);
 SOCKET serverSocket;
 bool serverRunning = false;  // Флаг для перевірки, чи сервер вже запущений
 void logMessage(HWND hwnd, const std::string& message);
@@ -39,7 +39,7 @@ void CaptureScreen(cv::Mat& frame) {
 
     BITMAPINFOHEADER bi = { sizeof(BITMAPINFOHEADER), screenWidth, -screenHeight, 1, 32, BI_RGB };
     cv::Mat raw(screenHeight, screenWidth, CV_8UC4);
-    GetDIBits(hScreen, hBitmap, 0, screenHeight, raw.data, (BITMAPINFO*)&bi, DIB_RGB_COLORS);
+    GetDIBits(hDC, hBitmap, 0, screenHeight, raw.data, (BITMAPINFO*)&bi, DIB_RGB_COLORS);
 
     cv::resize(raw, frame, cv::Size(screenWidth, screenHeight));
 
@@ -47,43 +47,41 @@ void CaptureScreen(cv::Mat& frame) {
     DeleteDC(hDC);
     ReleaseDC(NULL, hScreen);
 }
-
 void SimulateMouse(int x, int y, uint8_t action) {
-    int absX = (x * 65535) / screenWidth;
-    int absY = (y * 65535) / screenHeight;
-    std::string test1 = "pizda absX =" + std::to_string(absX);
-    logMessage(NULL, test1);
+    static int lastX = -1, lastY = -1;
+
     INPUT input = { 0 };
     input.type = INPUT_MOUSE;
-    input.mi.dx = absX;
-    input.mi.dy = absY;
-    input.mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
-    SendInput(1, &input, sizeof(INPUT));
-    
-    INPUT click = { 0 };
-    click.type = INPUT_MOUSE;
 
-    switch (action) {
-    case 1: // Left down
-        click.mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+    if (x != lastX || y != lastY) {
+        int absX = (x * 65535) / screenWidth;
+        int absY = (y * 65535) / screenHeight;
+
+        input.mi.dx = absX;
+        input.mi.dy = absY;
+        input.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
+        SendInput(1, &input, sizeof(INPUT));
+
+        lastX = x;
+        lastY = y;
+    }
+
+    if (action != 0) {
+        INPUT click = { 0 };
+        click.type = INPUT_MOUSE;
+
+        switch (action) {
+        case 1: click.mi.dwFlags = MOUSEEVENTF_LEFTDOWN; break;
+        case 2: click.mi.dwFlags = MOUSEEVENTF_LEFTUP; break;
+        case 3: click.mi.dwFlags = MOUSEEVENTF_RIGHTDOWN; break;
+        case 4: click.mi.dwFlags = MOUSEEVENTF_RIGHTUP; break;
+        default: return;
+        }
+
         SendInput(1, &click, sizeof(INPUT));
-        break;
-    case 2: // Left up
-        click.mi.dwFlags = MOUSEEVENTF_LEFTUP;
-        SendInput(1, &click, sizeof(INPUT));
-        break;
-    case 3: // Right down
-        click.mi.dwFlags = MOUSEEVENTF_RIGHTDOWN;
-        SendInput(1, &click, sizeof(INPUT));
-        break;
-    case 4: // Right up
-        click.mi.dwFlags = MOUSEEVENTF_RIGHTUP;
-        SendInput(1, &click, sizeof(INPUT));
-        break;
-    default:
-        break;
     }
 }
+
 
 
 
@@ -193,6 +191,36 @@ bool initializeServer(HWND hwnd, const std::string& serverIp, int serverPort) {
 }
 
 void handleClient(HWND hwnd, SOCKET clientSocket) {
+    std::atomic<bool> running = true;
+
+    // Потік обробки миші
+    std::thread mouseRecvThread([&]() {
+        int lastX = -1, lastY = -1;
+
+        while (running) {
+            char recvBuf[9];
+            int received = recv(clientSocket, recvBuf, 9, MSG_WAITALL);
+            if (received == 9) {
+                uint8_t action = recvBuf[0];
+                float normX, normY;
+                memcpy(&normX, recvBuf + 1, sizeof(float));
+                memcpy(&normY, recvBuf + 5, sizeof(float));
+
+                int x = static_cast<int>(normX * screenWidth);
+                int y = static_cast<int>(normY * screenHeight);
+                if (x != lastX || y != lastY || action != 0) {
+                    SimulateMouse(x, y, action);
+                    lastX = x;
+                    lastY = y;
+                }
+            }
+            else if (received == 0 || received == SOCKET_ERROR) {
+                break;
+            }
+        }
+        });
+
+    // Основний цикл відео
     cv::Mat frame_raw, frame_bgr;
     std::vector<uchar> buffer;
 
@@ -206,33 +234,14 @@ void handleClient(HWND hwnd, SOCKET clientSocket) {
         if (send(clientSocket, (char*)&imgSize, sizeof(imgSize), 0) == SOCKET_ERROR) break;
         if (send(clientSocket, reinterpret_cast<char*>(buffer.data()), imgSize, 0) == SOCKET_ERROR) break;
 
-        char recvBuf[9];
-        int received = recv(clientSocket, recvBuf, 9, MSG_WAITALL);
-        if (received == 9) {
-            uint8_t action = recvBuf[0];
-            float normX, normY;
-            memcpy(&normX, recvBuf + 1, sizeof(float));
-            memcpy(&normY, recvBuf + 5, sizeof(float));
-
-            int x = static_cast<int>(normX * screenWidth);
-            int y = static_cast<int>(normY * screenHeight);
-            SimulateMouse(x, y, action);
-        }
-        else if (received == 0 || received == SOCKET_ERROR) {
-            logMessage(NULL, "Помилка");
-            break;
-        }
-        else {
-            std::string test = "Виконується else" + std::to_string(received);
-            logMessage(NULL, test);
-            break;
-        }
-
         Sleep(10);  // ~100 FPS
     }
 
+    running = false;
     closesocket(clientSocket);
+    if (mouseRecvThread.joinable()) mouseRecvThread.join();
 }
+
 
 void serverThreadFunction(HWND hwnd, std::string serverLogin, int serverPort, std::string serverKey, std::string serverIp) {
     if (serverRunning) {
