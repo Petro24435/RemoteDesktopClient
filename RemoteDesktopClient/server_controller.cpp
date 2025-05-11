@@ -47,26 +47,18 @@ void CaptureScreen(cv::Mat& frame) {
     DeleteDC(hDC);
     ReleaseDC(NULL, hScreen);
 }
-void SimulateMouse(int x, int y, uint8_t action) {
-    static int lastX = -1, lastY = -1;
-
+void SimulateMouse(int x, int y, uint8_t action, bool relative = false) {
     INPUT input = { 0 };
     input.type = INPUT_MOUSE;
 
-    if (x != lastX || y != lastY) {
-        int absX = (x * 65535) / screenWidth;
-        int absY = (y * 65535) / screenHeight;
-
-        input.mi.dx = absX;
-        input.mi.dy = absY;
-        input.mi.dwFlags = MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE;
+    if (action == 0 || action == 5) {
+        input.mi.dx = relative ? x : (x * 65535) / screenWidth;
+        input.mi.dy = relative ? y : (y * 65535) / screenHeight;
+        input.mi.dwFlags = MOUSEEVENTF_MOVE | (relative ? 0 : MOUSEEVENTF_ABSOLUTE);
         SendInput(1, &input, sizeof(INPUT));
-
-        lastX = x;
-        lastY = y;
     }
 
-    if (action != 0) {
+    if (action >= 1 && action <= 4) {
         INPUT click = { 0 };
         click.type = INPUT_MOUSE;
 
@@ -75,12 +67,20 @@ void SimulateMouse(int x, int y, uint8_t action) {
         case 2: click.mi.dwFlags = MOUSEEVENTF_LEFTUP; break;
         case 3: click.mi.dwFlags = MOUSEEVENTF_RIGHTDOWN; break;
         case 4: click.mi.dwFlags = MOUSEEVENTF_RIGHTUP; break;
-        default: return;
         }
 
         SendInput(1, &click, sizeof(INPUT));
     }
+
+    if (action == 6 || action == 7) {
+        INPUT scroll = { 0 };
+        scroll.type = INPUT_MOUSE;
+        scroll.mi.dwFlags = MOUSEEVENTF_WHEEL;
+        scroll.mi.mouseData = (action == 6) ? WHEEL_DELTA : -WHEEL_DELTA;
+        SendInput(1, &scroll, sizeof(INPUT));
+    }
 }
+
 
 
 
@@ -193,32 +193,36 @@ bool initializeServer(HWND hwnd, const std::string& serverIp, int serverPort) {
 void handleClient(HWND hwnd, SOCKET clientSocket) {
     std::atomic<bool> running = true;
 
-    // Потік обробки миші
     std::thread mouseRecvThread([&]() {
-        int lastX = -1, lastY = -1;
-
         while (running) {
             char recvBuf[9];
             int received = recv(clientSocket, recvBuf, 9, MSG_WAITALL);
             if (received == 9) {
                 uint8_t action = recvBuf[0];
-                float normX, normY;
-                memcpy(&normX, recvBuf + 1, sizeof(float));
-                memcpy(&normY, recvBuf + 5, sizeof(float));
+                float fx, fy;
+                memcpy(&fx, recvBuf + 1, sizeof(float));
+                memcpy(&fy, recvBuf + 5, sizeof(float));
 
-                int x = static_cast<int>(normX * screenWidth);
-                int y = static_cast<int>(normY * screenHeight);
-                if (x != lastX || y != lastY || action != 0) {
+                if (action == 5) {  // відносне переміщення
+                    int dx = static_cast<int>(fx);
+                    int dy = static_cast<int>(fy);
+                    SimulateMouse(dx, dy, action, true);
+                }
+                else if (action == 0) {  // абсолютне переміщення
+                    int x = static_cast<int>(fx * screenWidth);
+                    int y = static_cast<int>(fy * screenHeight);
                     SimulateMouse(x, y, action);
-                    lastX = x;
-                    lastY = y;
+                }
+                else {
+                    SimulateMouse(0, 0, action);  // кліки або скрол
                 }
             }
-            else if (received == 0 || received == SOCKET_ERROR) {
+            else {
                 break;
             }
         }
         });
+
 
     // Основний цикл відео
     cv::Mat frame_raw, frame_bgr;

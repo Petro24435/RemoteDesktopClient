@@ -180,28 +180,54 @@ void connectToServer(const std::string& serverIp, int serverPort) {
             bool lChanged = (lButtonNow != lButtonPrev);
             bool rChanged = (rButtonNow != rButtonPrev);
 
-            if (moved || lChanged || rChanged) {
-                float normX = (float)pos.x / screenWidth;
-                float normY = (float)pos.y / screenHeight;
+            // Прокрутка
+            SHORT scrollState = GetAsyncKeyState(VK_MBUTTON);
+            static int wheelDelta = 0;
+            POINT pt;
+            GetCursorPos(&pt);
 
-                uint8_t action = 0;
-                if (lChanged) {
-                    action = lButtonNow ? 1 : 2;
-                }
-                else if (rChanged) {
-                    action = rButtonNow ? 3 : 4;
-                }
-                else if (moved) {
-                    action = 0;
-                }
+            // Action
+            uint8_t action = 255;
+            float val1 = 0, val2 = 0;
 
+            if (moved) {
+                int dx = pos.x - lastPos.x;
+                int dy = pos.y - lastPos.y;
+                val1 = static_cast<float>(dx);
+                val2 = static_cast<float>(dy);
+                action = 5; // відносне переміщення
+            }
+            if (lChanged) action = lButtonNow ? 1 : 2;
+            if (rChanged) action = rButtonNow ? 3 : 4;
+
+            // Прокрутка (зчитування з миші можливо тільки з RAW INPUT, тут — спрощеною клавішею)
+            // Наприклад: якщо натиснуто клавішу Up/Down — емулюємо scroll
+            if (GetAsyncKeyState(VK_UP) & 0x8000) {
+                action = 6;  // scroll up
+                val1 = 0; val2 = 0;
+            }
+            else if (GetAsyncKeyState(VK_DOWN) & 0x8000) {
+                action = 7;  // scroll down
+                val1 = 0; val2 = 0;
+            }
+
+            if (action != 255) {
                 char buffer[9];
                 buffer[0] = action;
-                memcpy(buffer + 1, &normX, sizeof(float));
-                memcpy(buffer + 5, &normY, sizeof(float));
+
+                if (action == 0) {
+                    // Абсолютне переміщення
+                    float normX = (float)pos.x / screenWidth;
+                    float normY = (float)pos.y / screenHeight;
+                    memcpy(buffer + 1, &normX, sizeof(float));
+                    memcpy(buffer + 5, &normY, sizeof(float));
+                }
+                else {
+                    memcpy(buffer + 1, &val1, sizeof(float));
+                    memcpy(buffer + 5, &val2, sizeof(float));
+                }
 
                 send(clientSocket, buffer, sizeof(buffer), 0);
-
                 lastPos = pos;
                 lButtonPrev = lButtonNow;
                 rButtonPrev = rButtonNow;
@@ -210,6 +236,7 @@ void connectToServer(const std::string& serverIp, int serverPort) {
             std::this_thread::sleep_for(std::chrono::milliseconds(15));
         }
         });
+
 
     // Потік прийому зображення
     std::thread imageThread([&]() {
