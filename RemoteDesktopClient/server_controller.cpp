@@ -51,7 +51,8 @@ void CaptureScreen(cv::Mat& frame) {
 void SimulateMouse(int x, int y, uint8_t action) {
     int absX = (x * 65535) / screenWidth;
     int absY = (y * 65535) / screenHeight;
-    logMessage(NULL, std::to_string(absX));
+    std::string test1 = "pizda absX =" + std::to_string(absX);
+    logMessage(NULL, test1);
     INPUT input = { 0 };
     input.type = INPUT_MOUSE;
     input.mi.dx = absX;
@@ -222,7 +223,8 @@ void handleClient(HWND hwnd, SOCKET clientSocket) {
             break;
         }
         else {
-            logMessage(NULL, std::to_string(received));
+            std::string test = "Виконується else" + std::to_string(received);
+            logMessage(NULL, test);
             break;
         }
 
