@@ -49,8 +49,8 @@ void CaptureScreen(cv::Mat& frame) {
 }
 
 void SimulateMouse(int x, int y, uint8_t action) {
-    int absX = x * screenWidth;
-    int absY = y * screenHeight;
+    int absX = (x * 65535) / screenWidth;
+    int absY = (y * 65535) / screenHeight;
     logMessage(NULL, std::to_string(absX));
     INPUT input = { 0 };
     input.type = INPUT_MOUSE;
@@ -134,11 +134,11 @@ bool PostJson(const std::string& url, const std::string& jsonData, std::string& 
     return (res == CURLE_OK);
 }
 void logMessage(HWND hwnd, const std::string& message) {
-    //std::ofstream logFile("server_log.txt", std::ios::app);
-    //if (logFile.is_open()) {
-    //    logFile << message << std::endl;
-    //    logFile.close();
-    //}
+    std::ofstream logFile("server_log.txt", std::ios::app);
+    if (logFile.is_open()) {
+        logFile << message << std::endl;
+        logFile.close();
+    }
     if (hwnd != NULL) {
         HWND hStatusEdit = hLogEdit;
         if (hStatusEdit) {
@@ -218,6 +218,10 @@ void handleClient(HWND hwnd, SOCKET clientSocket) {
             SimulateMouse(x, y, action);
         }
         else if (received == 0 || received == SOCKET_ERROR) {
+            logMessage(NULL, "Помилка");
+            break;
+        }
+        else {
             logMessage(NULL, std::to_string(received));
             break;
         }
