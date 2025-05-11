@@ -48,42 +48,44 @@ void CaptureScreen(cv::Mat& frame) {
     ReleaseDC(NULL, hScreen);
 }
 
-
 void SimulateMouse(int x, int y, uint8_t action) {
     int screenWidth = GetSystemMetrics(SM_CXSCREEN);
     int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-    int absX = x * screenWidth;
+    int absX = x *  screenWidth;
     int absY = y * screenHeight;
 
-    std::vector<INPUT> inputs;
+    INPUT input = { 0 };
+    input.type = INPUT_MOUSE;
+    input.mi.dx = absX;
+    input.mi.dy = absY;
+    input.mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
+    SendInput(1, &input, sizeof(INPUT));
 
-    // Додаємо переміщення (для всіх дій, навіть кліків — щоб були точні координати)
-    INPUT move = { 0 };
-    move.type = INPUT_MOUSE;
-    move.mi.dx = absX;
-    move.mi.dy = absY;
-    move.mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
-    inputs.push_back(move);
+    INPUT click = { 0 };
+    click.type = INPUT_MOUSE;
 
-    // Клік, якщо треба
-    if (action == 1 || action == 2) {
-        INPUT click = { 0 };
-        click.type = INPUT_MOUSE;
-        click.mi.dwFlags = (action == 1) ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP;
-        inputs.push_back(click);
-    }
-    else if (action == 3 || action == 4) {
-        INPUT click = { 0 };
-        click.type = INPUT_MOUSE;
-        click.mi.dwFlags = (action == 3) ? MOUSEEVENTF_RIGHTDOWN : MOUSEEVENTF_RIGHTUP;
-        inputs.push_back(click);
-    }
-
-    // Відправляємо всі дії одразу
-    if (!inputs.empty()) {
-        SendInput(static_cast<UINT>(inputs.size()), inputs.data(), sizeof(INPUT));
+    switch (action) {
+    case 1: // Left down
+        click.mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+        SendInput(1, &click, sizeof(INPUT));
+        break;
+    case 2: // Left up
+        click.mi.dwFlags = MOUSEEVENTF_LEFTUP;
+        SendInput(1, &click, sizeof(INPUT));
+        break;
+    case 3: // Right down
+        click.mi.dwFlags = MOUSEEVENTF_RIGHTDOWN;
+        SendInput(1, &click, sizeof(INPUT));
+        break;
+    case 4: // Right up
+        click.mi.dwFlags = MOUSEEVENTF_RIGHTUP;
+        SendInput(1, &click, sizeof(INPUT));
+        break;
+    default:
+        break;
     }
 }
+
 
 
 
@@ -150,41 +152,8 @@ void logMessage(HWND hwnd, const std::string& message) {
     }
 }
 
-// Функція для безпечного отримання всіх байтів
-
-bool recvAll(SOCKET socket, char* buffer, int totalBytes) {
-    int bytesReceived = 0;
-    while (bytesReceived < totalBytes) {
-        int result = recv(socket, buffer + bytesReceived, totalBytes - bytesReceived, 0);
-        if (result <= 0) {
-            return false; // Помилка або закриття з'єднання
-        }
-        bytesReceived += result;
-    }
-    return true;
-}
-
-// Функція для безпечного надсилання всіх байтів
-bool sendAll(SOCKET socket, const char* data, int totalBytes) {
-    int bytesSent = 0;
-    while (bytesSent < totalBytes) {
-        int result = send(socket, data + bytesSent, totalBytes - bytesSent, 0);
-        if (result == SOCKET_ERROR) {
-            return false;
-        }
-        bytesSent += result;
-    }
-    return true;
-}
-
 void handleClient(HWND hwnd, SOCKET clientSocket) {
-    // Отримуємо тип клієнта (не обов'язково, якщо тільки один тип)
-    char clientType[16] = { 0 };
-    int received = recv(clientSocket, clientType, sizeof(clientType) - 1, 0);
-    if (received <= 0) {
-        closesocket(clientSocket);
-        return;
-    }
+
 
     cv::Mat frame_raw, frame_bgr;
     std::vector<uchar> buffer;
@@ -220,7 +189,9 @@ void handleClient(HWND hwnd, SOCKET clientSocket) {
 
             SimulateMouse(x, y, action);
         }
-
+        else if (received != 9) {
+            break;
+        }
 
         Sleep(10);  // обмежуємо FPS ~100
     }
