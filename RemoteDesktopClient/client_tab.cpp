@@ -9,10 +9,12 @@
 #include <string>
 #include <cctype>
 #include <thread>
+#include <atomic>
+#include <chrono>
 #include <opencv2/opencv.hpp>
 #include "serverUserRegistration.h"
 #include "client_tab.h"
-//#include "server_tab.h"
+#include "user.h"
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "User32.lib")
 
@@ -126,9 +128,18 @@ LRESULT CALLBACK ClientTabWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 }
 void connectToServer(const std::string& serverIp, int serverPort) {
     WSADATA wsaData;
-    WSAStartup(MAKEWORD(2, 2), &wsaData);
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+        MessageBox(NULL, L"Помилка ініціалізації Winsock!", L"Помилка", MB_ICONERROR);
+        return;
+    }
 
     SOCKET clientSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (clientSocket == INVALID_SOCKET) {
+        MessageBox(NULL, L"Не вдалося створити сокет!", L"Помилка", MB_ICONERROR);
+        WSACleanup();
+        return;
+    }
+
     sockaddr_in serverAddr{};
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(serverPort);
@@ -142,8 +153,13 @@ void connectToServer(const std::string& serverIp, int serverPort) {
     }
 
     std::atomic<bool> isRunning(true);
+
+    // Надсилаємо логін
+    send(clientSocket, currentUser.login.c_str(), currentUser.login.size(), 0);
+
+    // Потік передачі миші
     std::thread mouseThread([&]() {
-        POINT lastPos = { -1, -1 }; // Щоб точно відправився перший рух
+        POINT lastPos = { -1, -1 };
         bool lButtonPrev = false;
         bool rButtonPrev = false;
 
@@ -168,10 +184,7 @@ void connectToServer(const std::string& serverIp, int serverPort) {
                 float normX = (float)pos.x / screenWidth;
                 float normY = (float)pos.y / screenHeight;
 
-                // Пакет: тип (1 byte), normX (4 bytes), normY (4 bytes)
-                // тип: 0 - move, 1 - L down, 2 - L up, 3 - R down, 4 - R up
                 uint8_t action = 0;
-
                 if (lChanged) {
                     action = lButtonNow ? 1 : 2;
                 }
@@ -198,7 +211,66 @@ void connectToServer(const std::string& serverIp, int serverPort) {
         }
         });
 
+    // Потік прийому зображення
+    std::thread imageThread([&]() {
+        using namespace std::chrono;
+        auto lastTime = high_resolution_clock::now();
+        int frameCount = 0;
+        float fps = 0.0f;
+
+        while (isRunning) {
+            int imgSize = 0;
+            int received = recv(clientSocket, (char*)&imgSize, sizeof(imgSize), MSG_WAITALL);
+            if (received <= 0 || imgSize <= 0) {
+                isRunning = false;
+                break;
+            }
+
+            std::vector<uchar> imgData(imgSize);
+            int total = 0;
+            while (total < imgSize) {
+                int bytes = recv(clientSocket, (char*)imgData.data() + total, imgSize - total, 0);
+                if (bytes <= 0) {
+                    isRunning = false;
+                    break;
+                }
+                total += bytes;
+            }
+
+            if (!isRunning) break;
+
+            cv::Mat img = cv::imdecode(imgData, cv::IMREAD_COLOR);
+            if (img.empty()) continue;
+
+            frameCount++;
+            auto now = high_resolution_clock::now();
+            auto duration = duration_cast<milliseconds>(now - lastTime);
+            if (duration.count() >= 1000) {
+                fps = frameCount * 1000.0f / duration.count();
+                frameCount = 0;
+                lastTime = now;
+            }
+
+            std::string title = "Remote Screen - FPS: " + std::to_string(static_cast<int>(fps));
+            cv::imshow(title, img);
+            if (cv::waitKey(1) == 27) { // натисни Esc для виходу
+                isRunning = false;
+                break;
+            }
+        }
+
+        cv::destroyAllWindows();
+        });
+
+    // Очікуємо завершення
+    imageThread.join();
+    isRunning = false;
+    mouseThread.join();
+
+    closesocket(clientSocket);
+    WSACleanup();
 }
+
 
 // Функція для малювання елементів вкладки клієнта
 void DrawClientTab(HWND hwnd) {

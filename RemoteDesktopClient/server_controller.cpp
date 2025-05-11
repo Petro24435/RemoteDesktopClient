@@ -152,69 +152,18 @@ void logMessage(HWND hwnd, const std::string& message) {
     }
 }
 
-void handleClient(HWND hwnd, SOCKET clientSocket) {
-
-
-    cv::Mat frame_raw, frame_bgr;
-    std::vector<uchar> buffer;
-
-    while (true) {
-        // Захоплення і кодування зображення
-        CaptureScreen(frame_raw);
-        cv::cvtColor(frame_raw, frame_bgr, cv::COLOR_BGRA2BGR);  // OpenCV працює з BGR
-        buffer.clear();
-        cv::imencode(".jpg", frame_bgr, buffer, { cv::IMWRITE_JPEG_QUALITY, 80 });
-
-        // Відправляємо розмір та зображення
-        int imgSize = static_cast<int>(buffer.size());
-        if (send(clientSocket, (char*)&imgSize, sizeof(imgSize), 0) == SOCKET_ERROR) break;
-        if (send(clientSocket, reinterpret_cast<char*>(buffer.data()), imgSize, 0) == SOCKET_ERROR) break;
-
-        // Прийом команд
-        fd_set readfds;
-        FD_ZERO(&readfds);
-        FD_SET(clientSocket, &readfds);
-        timeval timeout{ 0, 1000 };  // 1 мс
-
-        char buffer[9];
-        int received = recv(clientSocket, buffer, 9, MSG_WAITALL);
-        if (received == 9) {
-            uint8_t action = buffer[0];
-            float normX, normY;
-            memcpy(&normX, buffer + 1, sizeof(float));
-            memcpy(&normY, buffer + 5, sizeof(float));
-
-            int x = (int)(normX * screenWidth);
-            int y = (int)(normY * screenHeight);
-
-            SimulateMouse(x, y, action);
-        }
-        else if (received != 9) {
-            break;
-        }
-
-        Sleep(10);  // обмежуємо FPS ~100
-    }
-
-    closesocket(clientSocket);
-}
-
-
-
-// Функція для ініціалізації сервера
 bool initializeServer(HWND hwnd, const std::string& serverIp, int serverPort) {
     WSADATA wsaData;
-    int wsaResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-    if (wsaResult != 0) {
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
         logMessage(hwnd, "WSAStartup не вдалося ініціалізувати!");
-        setStatusColor(hwnd, 'r'); // Червоний
+        setStatusColor(hwnd, 'r');
         return false;
     }
 
     serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (serverSocket == INVALID_SOCKET) {
         logMessage(hwnd, "Не вдалося створити сокет!");
-        setStatusColor(hwnd, 'r'); // Червоний
+        setStatusColor(hwnd, 'r');
         WSACleanup();
         return false;
     }
@@ -222,28 +171,19 @@ bool initializeServer(HWND hwnd, const std::string& serverIp, int serverPort) {
     sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(serverPort);
-    serverAddr.sin_addr.s_addr = INADDR_ANY;
-    int result = inet_pton(AF_INET, serverIp.c_str(), &serverAddr.sin_addr);
-    if (result <= 0) {
-        logMessage(hwnd, "Невірна IP-адреса!");
-        setStatusColor(hwnd, '0');
-        closesocket(serverSocket);
-        WSACleanup();
-        return false;
-    }
+    inet_pton(AF_INET, serverIp.c_str(), &serverAddr.sin_addr);
+
     int optVal = 1;
-    int optLen = sizeof(optVal);
-    setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, (char*)&optVal, optLen);
-    int bindResult = bind(serverSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
-    if (bindResult == SOCKET_ERROR) {
+    setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, (char*)&optVal, sizeof(optVal));
+
+    if (bind(serverSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
         logMessage(hwnd, "Не вдалося прив'язати сокет до IP і порту!");
         closesocket(serverSocket);
         WSACleanup();
         return false;
     }
 
-    int listenResult = listen(serverSocket, SOMAXCONN);
-    if (listenResult == SOCKET_ERROR) {
+    if (listen(serverSocket, SOMAXCONN) == SOCKET_ERROR) {
         logMessage(hwnd, "Не вдалося почати слухати порт!");
         closesocket(serverSocket);
         WSACleanup();
@@ -253,20 +193,52 @@ bool initializeServer(HWND hwnd, const std::string& serverIp, int serverPort) {
     return true;
 }
 
-// Функція для запуску сервера
+void handleClient(HWND hwnd, SOCKET clientSocket) {
+    cv::Mat frame_raw, frame_bgr;
+    std::vector<uchar> buffer;
+
+    while (true) {
+        CaptureScreen(frame_raw);
+        cv::cvtColor(frame_raw, frame_bgr, cv::COLOR_BGRA2BGR);
+        buffer.clear();
+        cv::imencode(".jpg", frame_bgr, buffer, { cv::IMWRITE_JPEG_QUALITY, 80 });
+
+        int imgSize = static_cast<int>(buffer.size());
+        if (send(clientSocket, (char*)&imgSize, sizeof(imgSize), 0) == SOCKET_ERROR) break;
+        if (send(clientSocket, reinterpret_cast<char*>(buffer.data()), imgSize, 0) == SOCKET_ERROR) break;
+
+        char recvBuf[9];
+        int received = recv(clientSocket, recvBuf, 9, MSG_WAITALL);
+        if (received == 9) {
+            uint8_t action = recvBuf[0];
+            float normX, normY;
+            memcpy(&normX, recvBuf + 1, sizeof(float));
+            memcpy(&normY, recvBuf + 5, sizeof(float));
+
+            int x = static_cast<int>(normX * screenWidth);
+            int y = static_cast<int>(normY * screenHeight);
+            SimulateMouse(x, y, action);
+        }
+        else if (received == 0 || received == SOCKET_ERROR) {
+            break;
+        }
+
+        Sleep(10);  // ~100 FPS
+    }
+
+    closesocket(clientSocket);
+}
+
 void serverThreadFunction(HWND hwnd, std::string serverLogin, int serverPort, std::string serverKey, std::string serverIp) {
     if (serverRunning) {
         logMessage(hwnd, "Сервер вже запущений!");
-        return;  // Якщо сервер вже працює, не запускати знову
+        return;
     }
 
-    // Ініціалізація сервера
-    if (!initializeServer(hwnd, serverIp, serverPort)) {
-        return; // Якщо ініціалізація не вдалася, припиняємо запуск
-    }
+    if (!initializeServer(hwnd, serverIp, serverPort)) return;
 
     logMessage(hwnd, "Сервер працює на IP " + serverIp + " і порту " + std::to_string(serverPort));
-    setStatusColor(hwnd, 'g'); // Зелений
+    setStatusColor(hwnd, 'g');
     serverRunning = true;
 
     SOCKET clientSocket;
@@ -274,14 +246,12 @@ void serverThreadFunction(HWND hwnd, std::string serverLogin, int serverPort, st
     int clientAddrSize = sizeof(clientAddr);
 
     while (serverRunning) {
-        clientSocket = accept(serverSocket, (struct sockaddr*)&clientAddr, &clientAddrSize);
+        clientSocket = accept(serverSocket, (sockaddr*)&clientAddr, &clientAddrSize);
         if (clientSocket != INVALID_SOCKET) {
-            // Додаємо клієнта в активні клієнти
             activeClients[serverPort] = clientSocket;
             logMessage(hwnd, "Новий клієнт підключився до порту " + std::to_string(serverPort));
             setStatusColor(hwnd, 'y');
 
-            // Далі вже обробка логіну, наприклад:
             char loginBuffer[256] = { 0 };
             int bytesReceived = recv(clientSocket, loginBuffer, sizeof(loginBuffer) - 1, 0);
             if (bytesReceived > 0) {
@@ -290,18 +260,16 @@ void serverThreadFunction(HWND hwnd, std::string serverLogin, int serverPort, st
                 SetWindowTextA(hClientEdit, clientLogin.c_str());
             }
 
-            // Створення окремого потоку на обробку
             std::thread clientThread(handleClient, hwnd, clientSocket);
             clientThread.detach();
         }
-
     }
 
-    // Завершення роботи сервера
     closesocket(serverSocket);
     WSACleanup();
     serverRunning = false;
 }
+
 
 void addConnection(HWND hwnd, const std::string& serverLogin, int serverPort, const std::string& serverKey, const std::string& serverIp) {
     if (serverIp.empty() || serverKey.empty()) {
