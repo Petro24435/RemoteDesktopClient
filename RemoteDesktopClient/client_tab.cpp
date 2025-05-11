@@ -263,9 +263,6 @@ void connectToServer(const std::string& serverIp, int serverPort) {
             }
 
             if (!isRunning) break;
-            std::ofstream debugOut("frame.jpg", std::ios::binary);
-            debugOut.write((char*)imgData.data(), imgData.size());
-            debugOut.close();
             cv::Mat img = cv::imdecode(imgData, cv::IMREAD_COLOR);
             if (img.empty()) continue;
 
@@ -295,8 +292,8 @@ void connectToServer(const std::string& serverIp, int serverPort) {
             }
 
             cv::imshow(windowName, img);
-
             int key = cv::waitKey(1);
+
             if (key == 27) {
                 isRunning = false;
                 break;
@@ -306,13 +303,19 @@ void connectToServer(const std::string& serverIp, int serverPort) {
         cv::destroyWindow(windowName);
         });
 
-    imageThread.join();
-    isRunning = false;
-    mouseThread.join();
+    // Важливо викликати join для всіх потоків
+    imageThread.detach();
+    mouseThread.detach();
+
+    // Перевірка для коректного завершення роботи
+    while (isRunning) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
 
     closesocket(clientSocket);
     WSACleanup();
 }
+
 
 
 
