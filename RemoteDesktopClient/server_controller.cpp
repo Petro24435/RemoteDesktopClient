@@ -49,8 +49,6 @@ void CaptureScreen(cv::Mat& frame) {
 }
 
 void SimulateMouse(int x, int y, uint8_t action) {
-    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
     int absX = x * screenWidth;
     int absY = y * screenHeight;
     logMessage(NULL, std::to_string(absX));
@@ -220,6 +218,7 @@ void handleClient(HWND hwnd, SOCKET clientSocket) {
             SimulateMouse(x, y, action);
         }
         else if (received == 0 || received == SOCKET_ERROR) {
+            logMessage(NULL, std::to_string(received));
             break;
         }
 
