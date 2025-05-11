@@ -285,9 +285,13 @@ void connectToServer(const std::string& serverIp, int serverPort) {
             // Малюємо FPS як текст
             std::string fpsText = "FPS: " + std::to_string(static_cast<int>(fps));
             cv::putText(img, fpsText, cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 0.9, cv::Scalar(0, 255, 0), 2);
+            int screenW = GetSystemMetrics(SM_CXSCREEN);
+            int screenH = GetSystemMetrics(SM_CYSCREEN);
 
-            // Показуємо зображення в одному вікні
-            cv::imshow(windowName, img);
+            cv::Mat resized;
+            cv::resize(img, resized, cv::Size(screenW, screenH));
+            cv::imshow(windowName, resized);
+
             if (cv::waitKey(1) == 27) { // Esc
                 isRunning = false;
                 break;
