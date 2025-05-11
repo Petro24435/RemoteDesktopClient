@@ -41,7 +41,9 @@ void CaptureScreen(cv::Mat& frame) {
     cv::Mat raw(screenHeight, screenWidth, CV_8UC4);
     GetDIBits(hDC, hBitmap, 0, screenHeight, raw.data, (BITMAPINFO*)&bi, DIB_RGB_COLORS);
 
-    cv::resize(raw, frame, cv::Size(screenWidth, screenHeight));
+    int reducedWidth = static_cast<int>(screenWidth / 1.5);
+    int reducedHeight = static_cast<int>(screenHeight / 1.5);
+    cv::resize(raw, frame, cv::Size(reducedWidth, reducedHeight));
 
     DeleteObject(hBitmap);
     DeleteDC(hDC);
@@ -82,72 +84,6 @@ void SimulateMouse(int x, int y, uint8_t action, bool relative = false) {
 }
 
 
-
-
-
-
-//void ProcessMouseData(char* data) {
-//    int x, y, leftClick, rightClick;
-//    memcpy(&x, data, sizeof(int));
-//    memcpy(&y, data + sizeof(int), sizeof(int));
-//    memcpy(&leftClick, data + 2 * sizeof(int), sizeof(int));
-//    memcpy(&rightClick, data + 3 * sizeof(int), sizeof(int));
-//    // Імітуємо натискання миші
-//    SimulateMouse(x, y, leftClick, rightClick);
-//}
-
-
-//  Імітація натискання клавіші
-void SimulateKeyPress(int key, bool isPressed) {
-    INPUT input = { 0 };
-    input.type = INPUT_KEYBOARD;
-    input.ki.wVk = key;
-    input.ki.dwFlags = isPressed ? 0 : KEYEVENTF_KEYUP;
-    SendInput(1, &input, sizeof(INPUT));
-}
-
-
-size_t WriteCallbackController(void* contents, size_t size, size_t nmemb, std::string* output) {
-    size_t totalSize = size * nmemb;
-    output->append((char*)contents, totalSize);
-    return totalSize;
-}
-
-bool PostJson(const std::string& url, const std::string& jsonData, std::string& response) {
-    CURL* curl = curl_easy_init();
-    if (!curl) return false;
-
-    struct curl_slist* headers = nullptr;
-    headers = curl_slist_append(headers, "Content-Type: application/json");
-
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsonData.c_str());
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallbackController);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-
-    CURLcode res = curl_easy_perform(curl);
-    curl_slist_free_all(headers);
-    curl_easy_cleanup(curl);
-
-    return (res == CURLE_OK);
-}
-void logMessage(HWND hwnd, const std::string& message) {
-    std::ofstream logFile("server_log.txt", std::ios::app);
-    if (logFile.is_open()) {
-        logFile << message << std::endl;
-        logFile.close();
-    }
-    if (hwnd != NULL) {
-        HWND hStatusEdit = hLogEdit;
-        if (hStatusEdit) {
-            int size_needed = MultiByteToWideChar(CP_ACP, 0, message.c_str(), -1, NULL, 0);
-            std::wstring wMessage(size_needed, 0);
-            MultiByteToWideChar(CP_ACP, 0, message.c_str(), -1, &wMessage[0], size_needed);
-            SetWindowTextW(hStatusEdit, wMessage.c_str());
-        }
-    }
-}
 
 bool initializeServer(HWND hwnd, const std::string& serverIp, int serverPort) {
     WSADATA wsaData;
@@ -407,3 +343,70 @@ void cleanUnusedPortsAndKeys() {
 }
 
 
+
+
+
+
+
+//void ProcessMouseData(char* data) {
+//    int x, y, leftClick, rightClick;
+//    memcpy(&x, data, sizeof(int));
+//    memcpy(&y, data + sizeof(int), sizeof(int));
+//    memcpy(&leftClick, data + 2 * sizeof(int), sizeof(int));
+//    memcpy(&rightClick, data + 3 * sizeof(int), sizeof(int));
+//    // Імітуємо натискання миші
+//    SimulateMouse(x, y, leftClick, rightClick);
+//}
+
+
+//  Імітація натискання клавіші
+void SimulateKeyPress(int key, bool isPressed) {
+    INPUT input = { 0 };
+    input.type = INPUT_KEYBOARD;
+    input.ki.wVk = key;
+    input.ki.dwFlags = isPressed ? 0 : KEYEVENTF_KEYUP;
+    SendInput(1, &input, sizeof(INPUT));
+}
+
+
+size_t WriteCallbackController(void* contents, size_t size, size_t nmemb, std::string* output) {
+    size_t totalSize = size * nmemb;
+    output->append((char*)contents, totalSize);
+    return totalSize;
+}
+
+bool PostJson(const std::string& url, const std::string& jsonData, std::string& response) {
+    CURL* curl = curl_easy_init();
+    if (!curl) return false;
+
+    struct curl_slist* headers = nullptr;
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsonData.c_str());
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallbackController);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+
+    CURLcode res = curl_easy_perform(curl);
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+
+    return (res == CURLE_OK);
+}
+void logMessage(HWND hwnd, const std::string& message) {
+    std::ofstream logFile("server_log.txt", std::ios::app);
+    if (logFile.is_open()) {
+        logFile << message << std::endl;
+        logFile.close();
+    }
+    if (hwnd != NULL) {
+        HWND hStatusEdit = hLogEdit;
+        if (hStatusEdit) {
+            int size_needed = MultiByteToWideChar(CP_ACP, 0, message.c_str(), -1, NULL, 0);
+            std::wstring wMessage(size_needed, 0);
+            MultiByteToWideChar(CP_ACP, 0, message.c_str(), -1, &wMessage[0], size_needed);
+            SetWindowTextW(hStatusEdit, wMessage.c_str());
+        }
+    }
+}
