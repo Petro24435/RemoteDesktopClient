@@ -118,7 +118,7 @@ LRESULT CALLBACK ClientTabWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
-    break;
+        break;
 
     default:
         return DefWindowProc(hwnd, msg, wp, lp);
