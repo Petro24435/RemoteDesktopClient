@@ -103,7 +103,7 @@ void DrawConnectManagingTab(HWND hwnd)
     // Створення кнопок
     hCloseBtn = CreateWindowEx(0, L"BUTTON", L"Закрити З'єданння", WS_CHILD | WS_VISIBLE | WS_BORDER ,
         370, 60, 150, 25, hwnd, (HMENU)4006, NULL, NULL);
-    hDisconnectBtn = CreateWindowEx(0, L"BUTTON", L"Вікдлючити Клієнта", WS_CHILD | WS_VISIBLE | WS_BORDER ,
+    hDisconnectBtn = CreateWindowEx(0, L"BUTTON", L"Відключити Клієнта", WS_CHILD | WS_VISIBLE | WS_BORDER ,
         370, 100, 150, 25, hwnd, (HMENU)4007, NULL, NULL);
 
     // Кнопки з флажками
@@ -161,7 +161,10 @@ LRESULT CALLBACK ConnectManagingTabWndProc(HWND hwnd, UINT msg, WPARAM wParam, L
             removeConnection(hwnd, currentUser.login, port);
             MessageBox(hwnd, L"Закрито з'єднання і очищено таблиці", L"Успіх", MB_OK);
             break;
-    
+            case 4007:
+                disconnectClient(hwnd, port);
+                MessageBox(hwnd, L"Клієнта від'єднано", L"Успіх", MB_OK);
+                break;
         }
         break;
     }

@@ -100,69 +100,6 @@ bool initializeServer(HWND hwnd, const std::string& serverIp, int serverPort) {
 void handleClient(HWND hwnd, SOCKET clientSocket) {
     std::atomic<bool> running = true;
 
-    //std::thread mouseRecvThread([&]() {
-    //    struct MouseEvent {
-    //        int x, y;
-    //        int action; // 0 - рух, 1 - лівий клік, 2 - правий клік
-    //        bool isDown;
-    //    };
-
-    //    while (running) {
-    //        MouseEvent event;
-    //        int bytesReceived = recv(clientSocket, (char*)&event, sizeof(event), 0);
-
-    //        if (bytesReceived <= 0) break; // З'єднання розірвано
-    //        //if(mouseAccess)
-    //        {
-    //            // Отримуємо розмір екрана сервера для денормалізації координат
-    //            int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-    //            int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-
-    //            // Денормалізуємо координати
-    //            int targetX = (event.x * screenWidth) / 65535;
-    //            int targetY = (event.y * screenHeight) / 65535;
-
-    //            // Обробка подій
-    //            switch (event.action) {
-    //            case 0: // Рух миші
-    //                SetCursorPos(targetX, targetY);
-    //                break;
-
-    //            case 1: // Лівий клік
-    //                mouse_event(event.isDown ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP,
-    //                    targetX, targetY, 0, 0);
-    //                break;
-
-    //            case 2: // Правий клік
-    //                mouse_event(event.isDown ? MOUSEEVENTF_RIGHTDOWN : MOUSEEVENTF_RIGHTUP,
-    //                    targetX, targetY, 0, 0);
-    //                break;
-    //            }
-    //        }
-    //    }
-    //    });
-
-    //std::thread keyboardRecvThread([&]() {
-    //    struct KeyEvent {
-    //        int vkCode;
-    //        bool isPressed;
-    //    };
-
-    //    while (true) {
-    //        KeyEvent event;
-    //        int bytesReceived = recv(clientSocket, (char*)&event, sizeof(event), 0);
-
-    //        if (bytesReceived <= 0) break; // З'єднання розірвано
-    //        //if (keyboardAccess)
-    //        {
-    //            // Імітуємо натискання/відпускання клавіші
-    //            INPUT input = { 0 };
-    //            input.type = INPUT_KEYBOARD;
-    //            input.ki.wVk = event.vkCode;
-    //            input.ki.dwFlags = event.isPressed ? 0 : KEYEVENTF_KEYUP;
-    //            SendInput(1, &input, sizeof(INPUT));
-    //        }
-    //    }});
     std::thread inputRecvThread([&]() {
         // Об'єднана структура події (як на клієнті)
         struct InputEvent {
@@ -186,7 +123,7 @@ void handleClient(HWND hwnd, SOCKET clientSocket) {
             if (bytesReceived <= 0) break; // З'єднання розірвано
 
             // Обробка подій миші (типи 0-4)
-            if (event.type >= 0 && event.type <= 4) {
+            if (event.type >= 0 && event.type <= 4 && mouseAccess) {
                 // Денормалізуємо координати
                 int targetX = (event.x * screenWidth) / 65535;
                 int targetY = (event.y * screenHeight) / 65535;
@@ -217,7 +154,7 @@ void handleClient(HWND hwnd, SOCKET clientSocket) {
                 }
             }
             // Обробка подій клавіатури (типи 10+)
-            else if (event.type >= 10) {
+            else if (event.type >= 10 && keyboardAccess) {
                 INPUT input = { 0 };
                 input.type = INPUT_KEYBOARD;
                 input.ki.wVk = event.type - 10; // Віднімаємо 10, щоб отримати vkCode
@@ -407,32 +344,6 @@ void cleanUnusedPortsAndKeys() {
     if (!PostJson(url, oss.str(), response)) {
         std::cerr << "Помилка при очищенні з'єднань" << std::endl;
     }
-}
-
-
-
-
-
-
-
-//void ProcessMouseData(char* data) {
-//    int x, y, leftClick, rightClick;
-//    memcpy(&x, data, sizeof(int));
-//    memcpy(&y, data + sizeof(int), sizeof(int));
-//    memcpy(&leftClick, data + 2 * sizeof(int), sizeof(int));
-//    memcpy(&rightClick, data + 3 * sizeof(int), sizeof(int));
-//    // Імітуємо натискання миші
-//    SimulateMouse(x, y, leftClick, rightClick);
-//}
-
-
-//  Імітація натискання клавіші
-void SimulateKeyPress(int key, bool isPressed) {
-    INPUT input = { 0 };
-    input.type = INPUT_KEYBOARD;
-    input.ki.wVk = key;
-    input.ki.dwFlags = isPressed ? 0 : KEYEVENTF_KEYUP;
-    SendInput(1, &input, sizeof(INPUT));
 }
 
 

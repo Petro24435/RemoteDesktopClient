@@ -1,0 +1,104 @@
+    // Потік передачі миші
+    //std::thread mouseThread([&]() {
+    //     POINT lastPos = { -1, -1 };
+    //bool lButtonDown = false;
+    //bool rButtonDown = false;
+
+    //while (isRunning) {
+    //    // Отримуємо поточні координати миші
+    //    POINT currentPos;
+    //    GetCursorPos(&currentPos);
+
+    //    // Визначаємо стан кнопок миші
+    //    bool lButtonNow = (GetAsyncKeyState(VK_LBUTTON) & 0x8000);
+    //    bool rButtonNow = (GetAsyncKeyState(VK_RBUTTON) & 0x8000);
+
+    //    // Формуємо повідомлення для сервера
+    //    struct {
+    //        int x, y;          // Координати (нормалізовані до [0..1])
+    //        int action;         // 0 - рух, 1 - лівий клік, 2 - правий клік
+    //        bool isDown;       // true - кнопка натиснута, false - відпущена
+    //    } mouseEvent;
+
+    //    // Нормалізуємо координати (відносно розміру вікна)
+    //    RECT windowRect;
+    //    GetWindowRect(GetDesktopWindow(), &windowRect);
+    //    mouseEvent.x = (int)((currentPos.x * 65535) / (windowRect.right - windowRect.left));
+    //    mouseEvent.y = (int)((currentPos.y * 65535) / (windowRect.bottom - windowRect.top));
+
+    //    // Відправляємо події тільки при зміні стану
+    //    if (currentPos.x != lastPos.x || currentPos.y != lastPos.y) {
+    //        mouseEvent.action = 0; // Рух
+    //        send(clientSocket, (char*)&mouseEvent, sizeof(mouseEvent), 0);
+    //    }
+
+    //    // Лівий клік (натискання/відпускання)
+    //    if (lButtonNow != lButtonDown) {
+    //        mouseEvent.action = 1;
+    //        mouseEvent.isDown = lButtonNow;
+    //        send(clientSocket, (char*)&mouseEvent, sizeof(mouseEvent), 0);
+    //        lButtonDown = lButtonNow;
+    //    }
+
+    //    // Правий клік (натискання/відпускання)
+    //    if (rButtonNow != rButtonDown) {
+    //        mouseEvent.action = 2;
+    //        mouseEvent.isDown = rButtonNow;
+    //        send(clientSocket, (char*)&mouseEvent, sizeof(mouseEvent), 0);
+    //        rButtonDown = rButtonNow;
+    //    }
+
+    //    // Клієнт (додати в MouseControlThread)
+    //    if (GetAsyncKeyState(VK_UP) & 0x8000) {
+    //        mouse_event(MOUSEEVENTF_WHEEL, 0, 0, WHEEL_DELTA, 0);
+    //    }
+    //    else if (GetAsyncKeyState(VK_DOWN) & 0x8000) {
+    //        mouse_event(MOUSEEVENTF_WHEEL, 0, 0, -WHEEL_DELTA, 0);
+    //    }
+
+    //    lastPos = currentPos;
+    //    Sleep(10); // Оптимальна затримка для плавності
+    //    }
+    //    });
+    //std::thread keyboardThread([&]() {
+    //    bool keyStates[256] = { false };
+
+    //    while (isRunning) {
+    //        // Перевіряємо стан кожної клавіші
+    //        for (int vk = 0; vk < 256; ++vk) {
+    //            SHORT state = GetAsyncKeyState(vk);
+    //            bool isPressed = (state & 0x8000) != 0;
+
+    //            // Якщо стан змінився
+    //            if (isPressed != keyStates[vk]) {
+    //                keyStates[vk] = isPressed;
+
+    //                // Перевіряємо комбінацію Ctrl+Esc для перемикання режиму
+    //                if (vk == VK_ESCAPE && (GetAsyncKeyState(VK_CONTROL) & 0x8000)) {
+    //                    blockHotkeys = !blockHotkeys;
+    //                    continue;
+    //                }
+
+    //                // Якщо в режимі блокування гарячих клавіш, пропускаємо спецклавіші
+    //                if (blockHotkeys &&
+    //                    (vk == VK_LWIN || vk == VK_RWIN || vk == VK_CONTROL ||
+    //                        vk == VK_MENU || vk == VK_SHIFT || vk == VK_ESCAPE)) {
+    //                    continue;
+    //                }
+
+    //                // Формуємо пакет даних
+    //                struct {
+    //                    int vkCode;
+    //                    bool isPressed;
+    //                } keyEvent;
+
+    //                keyEvent.vkCode = vk;
+    //                keyEvent.isPressed = isPressed;
+
+    //                // Відправляємо на сервер
+    //                send(clientSocket, (char*)&keyEvent, sizeof(keyEvent), 0);
+    //            }
+    //        }
+    //        Sleep(10); // Оптимальна затримка
+    //    }
+    //    });
