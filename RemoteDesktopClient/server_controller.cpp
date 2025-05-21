@@ -20,6 +20,12 @@
 #pragma comment(lib, "User32.lib")
 #pragma comment(lib, "ws2_32.lib")
 
+#define WIDTH 1920
+#define HEIGHT 1080
+#define SCALE 1
+#define NEW_WIDTH (WIDTH / SCALE)
+#define NEW_HEIGHT (HEIGHT / SCALE)
+
 std::map<int, SOCKET> activeClients; // ключ — порт сервера, значення — клієнтський сокет
 #include "serverUserRegistration.h"
 int screenWidth = GetSystemMetrics(SM_CXSCREEN);
@@ -30,27 +36,18 @@ void logMessage(HWND hwnd, const std::string& message);
 std::unordered_map<int, bool> keyStates;
 
 void CaptureScreen(cv::Mat& frame) {
-    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-
     HDC hScreen = GetDC(NULL);
     HDC hDC = CreateCompatibleDC(hScreen);
-    HBITMAP hBitmap = CreateCompatibleBitmap(hScreen, screenWidth, screenHeight);
+    HBITMAP hBitmap = CreateCompatibleBitmap(hScreen, WIDTH, HEIGHT);
     SelectObject(hDC, hBitmap);
+    BitBlt(hDC, 0, 0, WIDTH, HEIGHT, hScreen, 0, 0, SRCCOPY);
 
-    BitBlt(hDC, 0, 0, screenWidth, screenHeight, hScreen, 0, 0, SRCCOPY);
+    BITMAPINFOHEADER bi = { sizeof(BITMAPINFOHEADER), WIDTH, -HEIGHT, 1, 24, BI_RGB };
+    cv::Mat fullFrame(HEIGHT, WIDTH, CV_8UC3);
+    GetDIBits(hScreen, hBitmap, 0, HEIGHT, fullFrame.data, (BITMAPINFO*)&bi, DIB_RGB_COLORS);
 
-    BITMAPINFOHEADER bi = { sizeof(BITMAPINFOHEADER), screenWidth, -screenHeight, 1, 32, BI_RGB };
-    cv::Mat raw(screenHeight, screenWidth, CV_8UC4);
-    GetDIBits(hDC, hBitmap, 0, screenHeight, raw.data, (BITMAPINFO*)&bi, DIB_RGB_COLORS);
-
-    // Конвертація BGRA  BGR
-    cv::cvtColor(raw, frame, cv::COLOR_BGRA2BGR);
-
-    // Масштабування до 1280x720 (з обрізанням за потреби)
-    //float scale = std::min(1280.0f / frame.cols, 720.0f / frame.rows);
-    //cv::resize(frame, frame, cv::Size(), scale, scale);
-    cv::resize(frame, frame, cv::Size(1280, 720), 0, 0, cv::INTER_LINEAR);
+    cv::resize(fullFrame, frame, cv::Size(NEW_WIDTH, NEW_HEIGHT));
+    cv::cvtColor(frame, frame, cv::COLOR_BGRA2BGR);
 
     DeleteObject(hBitmap);
     DeleteDC(hDC);
