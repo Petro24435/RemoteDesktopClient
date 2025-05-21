@@ -20,5 +20,7 @@ struct FriendInfo {
 void DrawFriendsTab(HWND hwnd);
 void InitLastConnectionsTab(HWND hwnd);
 void LoadFriendsFromCSV(const std::wstring& filename, std::vector<FriendInfo>& friends);
+void SaveFriendsToCSV(const std::wstring& filename, std::vector<FriendInfo>& friends);
+void AddFriendToCSV(const std::wstring& serverLogin, const std::wstring& clientLogin);
 
 #endif // FRIENDS_TAB_H

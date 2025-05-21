@@ -18,6 +18,8 @@
 #include "serverUserRegistration.h"
 #include "client_tab.h"
 #include "user.h"
+#include "server_tab.h"
+#include "friends_tab.h"
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "User32.lib")
 
@@ -155,11 +157,20 @@ void connectToServer(const std::string& serverIp, int serverPort) {
         WSACleanup();
         return;
     }
-
+    updateConnection(hStatusIcon, serverPort, currentUser.login.c_str(), currentUser.ip.c_str());
+    
     std::atomic<bool> isRunning(true);
 
     // Надсилаємо логін
     send(clientSocket, currentUser.login.c_str(), currentUser.login.size(), 0);
+    char loginBuffer[256] = { 0 };
+    int bytesReceived = recv(clientSocket, loginBuffer, sizeof(loginBuffer) - 1, 0);
+    if (bytesReceived > 0) {
+        loginBuffer[bytesReceived] = '\0';
+        std::string clientLogin = loginBuffer;
+        AddFriendToCSV(std::wstring(clientLogin.begin(), clientLogin.end()), std::wstring(currentUser.login.begin(), currentUser.login.end()));
+    }
+    
     std::thread inputThread([&]() {
     // Стани миші
     POINT lastPos = { -1, -1 };

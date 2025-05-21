@@ -151,6 +151,7 @@ LRESULT CALLBACK ConnectManagingTabWndProc(HWND hwnd, UINT msg, WPARAM wParam, L
         case 4008: {  // Флажок миші
                 mouseAccess = !mouseAccess;
             }
+                 break;
         case 4009: {  // Флажок клавіатури
                 keyboardAccess = !keyboardAccess;
             }

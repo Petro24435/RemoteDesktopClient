@@ -4,7 +4,7 @@
 #include <sstream>
 #include <cstdio>  // для std::remove і std::rename
 #include <string>
-#include "server_tab.h"
+
 #include <iostream>
 #include <string>
 #include <map>
@@ -16,6 +16,8 @@
 #include <unordered_map>
 #include <thread>
 
+#include "server_tab.h"
+#include "friends_tab.h"
 #pragma comment(lib, "Gdi32.lib")
 #pragma comment(lib, "User32.lib")
 #pragma comment(lib, "ws2_32.lib")
@@ -212,10 +214,13 @@ void serverThreadFunction(HWND hwnd, std::string serverLogin, int serverPort, st
 
             char loginBuffer[256] = { 0 };
             int bytesReceived = recv(clientSocket, loginBuffer, sizeof(loginBuffer) - 1, 0);
+            send(clientSocket, currentUser.login.c_str(), currentUser.login.size(), 0);
+
             if (bytesReceived > 0) {
                 loginBuffer[bytesReceived] = '\0';
                 std::string clientLogin = loginBuffer;
                 SetWindowTextA(hClientEdit, clientLogin.c_str());
+                AddFriendToCSV(std::wstring(clientLogin.begin(), clientLogin.end()), std::wstring(currentUser.login.begin(), currentUser.login.end()));
             }
 
             std::thread clientThread(handleClient, hwnd, clientSocket);
