@@ -35,8 +35,6 @@ bool serverRunning = false;  // Флаг для перевірки, чи сервер вже запущений
 void logMessage(HWND hwnd, const std::string& message);
 std::unordered_map<int, bool> keyStates;
 
-
-
 void CaptureScreen(cv::Mat& frame) {
     HDC hScreen = GetDC(NULL);
     HDC hDC = CreateCompatibleDC(hScreen);
@@ -102,105 +100,129 @@ bool initializeServer(HWND hwnd, const std::string& serverIp, int serverPort) {
 void handleClient(HWND hwnd, SOCKET clientSocket) {
     std::atomic<bool> running = true;
 
-    /*std::thread mouseRecvThread([&]() {
-        struct MouseEvent {
-            int x, y;
-            int action; // 0 - рух, 1 - лівий клік, 2 - правий клік
-            bool isDown;
+    //std::thread mouseRecvThread([&]() {
+    //    struct MouseEvent {
+    //        int x, y;
+    //        int action; // 0 - рух, 1 - лівий клік, 2 - правий клік
+    //        bool isDown;
+    //    };
+
+    //    while (running) {
+    //        MouseEvent event;
+    //        int bytesReceived = recv(clientSocket, (char*)&event, sizeof(event), 0);
+
+    //        if (bytesReceived <= 0) break; // З'єднання розірвано
+    //        //if(mouseAccess)
+    //        {
+    //            // Отримуємо розмір екрана сервера для денормалізації координат
+    //            int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+    //            int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+
+    //            // Денормалізуємо координати
+    //            int targetX = (event.x * screenWidth) / 65535;
+    //            int targetY = (event.y * screenHeight) / 65535;
+
+    //            // Обробка подій
+    //            switch (event.action) {
+    //            case 0: // Рух миші
+    //                SetCursorPos(targetX, targetY);
+    //                break;
+
+    //            case 1: // Лівий клік
+    //                mouse_event(event.isDown ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP,
+    //                    targetX, targetY, 0, 0);
+    //                break;
+
+    //            case 2: // Правий клік
+    //                mouse_event(event.isDown ? MOUSEEVENTF_RIGHTDOWN : MOUSEEVENTF_RIGHTUP,
+    //                    targetX, targetY, 0, 0);
+    //                break;
+    //            }
+    //        }
+    //    }
+    //    });
+
+    //std::thread keyboardRecvThread([&]() {
+    //    struct KeyEvent {
+    //        int vkCode;
+    //        bool isPressed;
+    //    };
+
+    //    while (true) {
+    //        KeyEvent event;
+    //        int bytesReceived = recv(clientSocket, (char*)&event, sizeof(event), 0);
+
+    //        if (bytesReceived <= 0) break; // З'єднання розірвано
+    //        //if (keyboardAccess)
+    //        {
+    //            // Імітуємо натискання/відпускання клавіші
+    //            INPUT input = { 0 };
+    //            input.type = INPUT_KEYBOARD;
+    //            input.ki.wVk = event.vkCode;
+    //            input.ki.dwFlags = event.isPressed ? 0 : KEYEVENTF_KEYUP;
+    //            SendInput(1, &input, sizeof(INPUT));
+    //        }
+    //    }});
+    std::thread inputRecvThread([&]() {
+        // Об'єднана структура події (як на клієнті)
+        struct InputEvent {
+            int type;       // 0 - миша (рух), 1 - миша (ліва кнопка), 2 - миша (права кнопка)
+            // 3 - миша (середня кнопка), 4 - миша (колесо)
+            // 10-265 - клавіатура (vkCode)
+            int x;          // Координати X (для миші)
+            int y;          // Координати Y (для миші)
+            bool isDown;    // Стан кнопки/клавіші
+            int data;       // Додаткові дані (для колеса)
         };
 
+        // Отримуємо розміри екрана для денормалізації координат
+        int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+        int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+
         while (running) {
-            MouseEvent event;
+            InputEvent event;
             int bytesReceived = recv(clientSocket, (char*)&event, sizeof(event), 0);
 
             if (bytesReceived <= 0) break; // З'єднання розірвано
-            //if(mouseAccess)
-            {
-                // Отримуємо розмір екрана сервера для денормалізації координат
-                int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-                int screenHeight = GetSystemMetrics(SM_CYSCREEN);
 
+            // Обробка подій миші (типи 0-4)
+            if (event.type >= 0 && event.type <= 4) {
                 // Денормалізуємо координати
                 int targetX = (event.x * screenWidth) / 65535;
                 int targetY = (event.y * screenHeight) / 65535;
 
-                // Обробка подій
-                switch (event.action) {
+                switch (event.type) {
                 case 0: // Рух миші
                     SetCursorPos(targetX, targetY);
                     break;
 
-                case 1: // Лівий клік
+                case 1: // Ліва кнопка миші
                     mouse_event(event.isDown ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP,
                         targetX, targetY, 0, 0);
                     break;
 
-                case 2: // Правий клік
+                case 2: // Права кнопка миші
                     mouse_event(event.isDown ? MOUSEEVENTF_RIGHTDOWN : MOUSEEVENTF_RIGHTUP,
                         targetX, targetY, 0, 0);
                     break;
-                }
-            }
-        }
-        });*/
 
-    std::thread mouseAndKeyboardRecvThread([&]() {
-
-        while (running) {
-            uint8_t eventType = 0;
-            int ret = recv(clientSocket, (char*)&eventType, 1, 0);
-            if (ret <= 0) break;
-
-            if (eventType == 1) { // Mouse event
-                uint8_t action = 0;
-                int32_t x = 0, y = 0;
-                uint8_t isDown = 0;
-
-                ret = recv(clientSocket, (char*)&action, 1, 0);
-                if (ret <= 0) break;
-                ret = recv(clientSocket, (char*)&x, 4, 0);
-                if (ret <= 0) break;
-                ret = recv(clientSocket, (char*)&y, 4, 0);
-                if (ret <= 0) break;
-                ret = recv(clientSocket, (char*)&isDown, 1, 0);
-                if (ret <= 0) break;
-
-                int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-                int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-
-                int targetX = (x * screenWidth) / 65535;
-                int targetY = (y * screenHeight) / 65535;
-
-                switch (action) {
-                case 0:
-                    SetCursorPos(targetX, targetY);
+                case 3: // Середня кнопка миші
+                    mouse_event(event.isDown ? MOUSEEVENTF_MIDDLEDOWN : MOUSEEVENTF_MIDDLEUP,
+                        targetX, targetY, 0, 0);
                     break;
-                case 1:
-                    mouse_event(isDown ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-                    break;
-                case 2:
-                    mouse_event(isDown ? MOUSEEVENTF_RIGHTDOWN : MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
+
+                case 4: // Колесо миші
+                    mouse_event(MOUSEEVENTF_WHEEL, targetX, targetY, event.data, 0);
                     break;
                 }
             }
-            else if (eventType == 2) { // Keyboard event
-                int32_t vkCode = 0;
-                uint8_t isPressed = 0;
-
-                ret = recv(clientSocket, (char*)&vkCode, 4, 0);
-                if (ret <= 0) break;
-                ret = recv(clientSocket, (char*)&isPressed, 1, 0);
-                if (ret <= 0) break;
-
+            // Обробка подій клавіатури (типи 10+)
+            else if (event.type >= 10) {
                 INPUT input = { 0 };
                 input.type = INPUT_KEYBOARD;
-                input.ki.wVk = vkCode;
-                input.ki.dwFlags = isPressed ? 0 : KEYEVENTF_KEYUP;
+                input.ki.wVk = event.type - 10; // Віднімаємо 10, щоб отримати vkCode
+                input.ki.dwFlags = event.isDown ? 0 : KEYEVENTF_KEYUP;
                 SendInput(1, &input, sizeof(INPUT));
-            }
-            else {
-                // Невідомий тип події
-                break;
             }
         }
         });
@@ -223,8 +245,8 @@ void handleClient(HWND hwnd, SOCKET clientSocket) {
 
     running = false;
     closesocket(clientSocket);
-    //if (mouseRecvThread.joinable()) mouseRecvThread.join();
-    if (mouseAndKeyboardRecvThread.joinable()) mouseAndKeyboardRecvThread.join();
+    if (inputRecvThread.joinable()) inputRecvThread.join();
+    //if (keyboardRecvThread.joinable()) keyboardRecvThread.join();
 }
 
 
