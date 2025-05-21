@@ -135,30 +135,40 @@ void handleClient(HWND hwnd, SOCKET clientSocket) {
     std::atomic<bool> running = true;
 
     std::thread mouseRecvThread([&]() {
-        while (running) {
-            char recvBuf[9];
-            int received = recv(clientSocket, recvBuf, 9, MSG_WAITALL);
-            if (received == 9) {
-                uint8_t action = recvBuf[0];
-                float fx, fy;
-                memcpy(&fx, recvBuf + 1, sizeof(float));
-                memcpy(&fy, recvBuf + 5, sizeof(float));
+        struct MouseEvent {
+            int x, y;
+            int action; // 0 - рух, 1 - лівий клік, 2 - правий клік
+            bool isDown;
+        };
 
-                if (action == 5) {  // відносне переміщення
-                    int dx = static_cast<int>(fx);
-                    int dy = static_cast<int>(fy);
-                    SimulateMouse(dx, dy, action, true);
-                }
-                else if (action == 0) {  // абсолютне переміщення
-                    int x = static_cast<int>(fx * screenWidth);
-                    int y = static_cast<int>(fy * screenHeight);
-                    SimulateMouse(x, y, action);
-                }
-                else {
-                    SimulateMouse(0, 0, action);  // кліки або скрол
-                }
-            }
-            else {
+        while (running) {
+            MouseEvent event;
+            int bytesReceived = recv(clientSocket, (char*)&event, sizeof(event), 0);
+
+            if (bytesReceived <= 0) break; // З'єднання розірвано
+
+            // Отримуємо розмір екрана сервера для денормалізації координат
+            int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+            int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+
+            // Денормалізуємо координати
+            int targetX = (event.x * screenWidth) / 65535;
+            int targetY = (event.y * screenHeight) / 65535;
+
+            // Обробка подій
+            switch (event.action) {
+            case 0: // Рух миші
+                SetCursorPos(targetX, targetY);
+                break;
+
+            case 1: // Лівий клік
+                mouse_event(event.isDown ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP,
+                    targetX, targetY, 0, 0);
+                break;
+
+            case 2: // Правий клік
+                mouse_event(event.isDown ? MOUSEEVENTF_RIGHTDOWN : MOUSEEVENTF_RIGHTUP,
+                    targetX, targetY, 0, 0);
                 break;
             }
         }

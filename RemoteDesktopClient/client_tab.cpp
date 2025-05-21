@@ -161,81 +161,64 @@ void connectToServer(const std::string& serverIp, int serverPort) {
 
     // Потік передачі миші
     std::thread mouseThread([&]() {
-        POINT lastPos = { -1, -1 };
-        bool lButtonPrev = false;
-        bool rButtonPrev = false;
+         POINT lastPos = { -1, -1 };
+    bool lButtonDown = false;
+    bool rButtonDown = false;
 
-        int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-        int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+    while (isRunning) {
+        // Отримуємо поточні координати миші
+        POINT currentPos;
+        GetCursorPos(&currentPos);
 
-        while (isRunning) {
-            POINT pos;
-            GetCursorPos(&pos);
+        // Визначаємо стан кнопок миші
+        bool lButtonNow = (GetAsyncKeyState(VK_LBUTTON) & 0x8000);
+        bool rButtonNow = (GetAsyncKeyState(VK_RBUTTON) & 0x8000);
 
-            SHORT lState = GetAsyncKeyState(VK_LBUTTON);
-            SHORT rState = GetAsyncKeyState(VK_RBUTTON);
+        // Формуємо повідомлення для сервера
+        struct {
+            int x, y;          // Координати (нормалізовані до [0..1])
+            int action;         // 0 - рух, 1 - лівий клік, 2 - правий клік
+            bool isDown;       // true - кнопка натиснута, false - відпущена
+        } mouseEvent;
 
-            bool lButtonNow = (lState & 0x8000);
-            bool rButtonNow = (rState & 0x8000);
+        // Нормалізуємо координати (відносно розміру вікна)
+        RECT windowRect;
+        GetWindowRect(GetDesktopWindow(), &windowRect);
+        mouseEvent.x = (int)((currentPos.x * 65535) / (windowRect.right - windowRect.left));
+        mouseEvent.y = (int)((currentPos.y * 65535) / (windowRect.bottom - windowRect.top));
 
-            bool moved = (pos.x != lastPos.x || pos.y != lastPos.y);
-            bool lChanged = (lButtonNow != lButtonPrev);
-            bool rChanged = (rButtonNow != rButtonPrev);
+        // Відправляємо події тільки при зміні стану
+        if (currentPos.x != lastPos.x || currentPos.y != lastPos.y) {
+            mouseEvent.action = 0; // Рух
+            send(clientSocket, (char*)&mouseEvent, sizeof(mouseEvent), 0);
+        }
 
-            // Прокрутка
-            SHORT scrollState = GetAsyncKeyState(VK_MBUTTON);
-            static int wheelDelta = 0;
-            POINT pt;
-            GetCursorPos(&pt);
+        // Лівий клік (натискання/відпускання)
+        if (lButtonNow != lButtonDown) {
+            mouseEvent.action = 1;
+            mouseEvent.isDown = lButtonNow;
+            send(clientSocket, (char*)&mouseEvent, sizeof(mouseEvent), 0);
+            lButtonDown = lButtonNow;
+        }
 
-            // Action
-            uint8_t action = 255;
-            float val1 = 0, val2 = 0;
+        // Правий клік (натискання/відпускання)
+        if (rButtonNow != rButtonDown) {
+            mouseEvent.action = 2;
+            mouseEvent.isDown = rButtonNow;
+            send(clientSocket, (char*)&mouseEvent, sizeof(mouseEvent), 0);
+            rButtonDown = rButtonNow;
+        }
 
-            if (moved) {
-                int dx = pos.x - lastPos.x;
-                int dy = pos.y - lastPos.y;
-                val1 = static_cast<float>(dx);
-                val2 = static_cast<float>(dy);
-                action = 5; // відносне переміщення
-            }
-            if (lChanged) action = lButtonNow ? 1 : 2;
-            if (rChanged) action = rButtonNow ? 3 : 4;
+        // Клієнт (додати в MouseControlThread)
+        if (GetAsyncKeyState(VK_UP) & 0x8000) {
+            mouse_event(MOUSEEVENTF_WHEEL, 0, 0, WHEEL_DELTA, 0);
+        }
+        else if (GetAsyncKeyState(VK_DOWN) & 0x8000) {
+            mouse_event(MOUSEEVENTF_WHEEL, 0, 0, -WHEEL_DELTA, 0);
+        }
 
-            // Прокрутка (зчитування з миші можливо тільки з RAW INPUT, тут — спрощеною клавішею)
-            // Наприклад: якщо натиснуто клавішу Up/Down — емулюємо scroll
-            if (GetAsyncKeyState(VK_UP) & 0x8000) {
-                action = 6;  // scroll up
-                val1 = 0; val2 = 0;
-            }
-            else if (GetAsyncKeyState(VK_DOWN) & 0x8000) {
-                action = 7;  // scroll down
-                val1 = 0; val2 = 0;
-            }
-
-            if (action != 255) {
-                char buffer[9];
-                buffer[0] = action;
-
-                if (action == 0) {
-                    // Абсолютне переміщення
-                    float normX = (float)pos.x / screenWidth;
-                    float normY = (float)pos.y / screenHeight;
-                    memcpy(buffer + 1, &normX, sizeof(float));
-                    memcpy(buffer + 5, &normY, sizeof(float));
-                }
-                else {
-                    memcpy(buffer + 1, &val1, sizeof(float));
-                    memcpy(buffer + 5, &val2, sizeof(float));
-                }
-
-                send(clientSocket, buffer, sizeof(buffer), 0);
-                lastPos = pos;
-                lButtonPrev = lButtonNow;
-                rButtonPrev = rButtonNow;
-            }
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(15));
+        lastPos = currentPos;
+        Sleep(10); // Оптимальна затримка для плавності
         }
         });
 
