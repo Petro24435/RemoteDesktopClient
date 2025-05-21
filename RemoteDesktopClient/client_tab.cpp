@@ -12,6 +12,8 @@
 #include <atomic>
 #include <chrono>
 #include <opencv2/opencv.hpp>
+#include <algorithm>
+#include <cmath>
 #include "serverUserRegistration.h"
 #include "client_tab.h"
 #include "user.h"
@@ -240,21 +242,14 @@ void connectToServer(const std::string& serverIp, int serverPort) {
 
     // Потік прийому зображення
     std::thread imageThread([&]() {
-        using namespace std::chrono;
-        auto lastTime = high_resolution_clock::now();
-        int frameCount = 0;
-        float fps = 0.0f;
-
-        const std::string windowName = "Remote Screen";
+        const std::string windowName = "Remote Screen (1280x720)";
         cv::namedWindow(windowName, cv::WINDOW_NORMAL);
+        cv::resizeWindow(windowName, 1280, 720); // Фіксований розмір
 
         while (isRunning) {
             int imgSize = 0;
             int received = recv(clientSocket, (char*)&imgSize, sizeof(imgSize), MSG_WAITALL);
-            if (received <= 0 || imgSize <= 0) {
-                isRunning = false;
-                break;
-            }
+            if (received <= 0 || imgSize <= 0) break;
 
             std::vector<uchar> imgData(imgSize);
             int total = 0;
@@ -272,34 +267,24 @@ void connectToServer(const std::string& serverIp, int serverPort) {
             cv::Mat img = cv::imdecode(imgData, cv::IMREAD_COLOR);
             if (img.empty()) continue;
 
-            // FPS
-            frameCount++;
-            auto now = high_resolution_clock::now();
-            auto duration = duration_cast<milliseconds>(now - lastTime);
-            if (duration.count() >= 1000) {
-                fps = frameCount * 1000.0f / duration.count();
-                frameCount = 0;
-                lastTime = now;
-            }
+            // Створюємо чорний фон 1280x720
+            cv::Mat displayFrame(720, 1280, CV_8UC3, cv::Scalar(0, 0, 0));
 
-            // Малюємо FPS як текст
-            std::string fpsText = "FPS: " + std::to_string(static_cast<int>(fps));
-            cv::putText(img, fpsText, cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 0.9, cv::Scalar(0, 255, 0), 2);
-            int screenW = GetSystemMetrics(SM_CXSCREEN);
-            int screenH = GetSystemMetrics(SM_CYSCREEN);
+            // Розміщуємо зображення по центру (з обрізанням, якщо потрібно)
+            int xOffset = (1280 - img.cols) / 2;
+            int yOffset = (720 - img.rows) / 2;
+            img.copyTo(displayFrame(cv::Rect(xOffset, yOffset, img.cols, img.rows)));
 
-            cv::Mat resized;
-            cv::resize(img, resized, cv::Size(screenW, screenH));
-            cv::imshow(windowName, resized);
+            cv::imshow(windowName, displayFrame);
 
-            if (cv::waitKey(1) == 27) { // Esc
+            if (cv::waitKey(1) == 27) { // Esc для виходу
                 isRunning = false;
                 break;
             }
         }
-
         cv::destroyWindow(windowName);
         });
+
 
 
     // Очікуємо завершення

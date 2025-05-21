@@ -29,26 +29,36 @@ bool serverRunning = false;  // Флаг для перевірки, чи сервер вже запущений
 void logMessage(HWND hwnd, const std::string& message);
 std::unordered_map<int, bool> keyStates;
 
-//  Зняття скріншоту
 void CaptureScreen(cv::Mat& frame) {
+    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+
     HDC hScreen = GetDC(NULL);
     HDC hDC = CreateCompatibleDC(hScreen);
     HBITMAP hBitmap = CreateCompatibleBitmap(hScreen, screenWidth, screenHeight);
     SelectObject(hDC, hBitmap);
+
     BitBlt(hDC, 0, 0, screenWidth, screenHeight, hScreen, 0, 0, SRCCOPY);
 
     BITMAPINFOHEADER bi = { sizeof(BITMAPINFOHEADER), screenWidth, -screenHeight, 1, 32, BI_RGB };
     cv::Mat raw(screenHeight, screenWidth, CV_8UC4);
     GetDIBits(hDC, hBitmap, 0, screenHeight, raw.data, (BITMAPINFO*)&bi, DIB_RGB_COLORS);
 
-    int reducedWidth = static_cast<int>(screenWidth / 1.5);
-    int reducedHeight = static_cast<int>(screenHeight / 1.5);
-    cv::resize(raw, frame, cv::Size(reducedWidth, reducedHeight));
+    // Конвертація BGRA  BGR (OpenCV працює з BGR)
+    cv::cvtColor(raw, frame, cv::COLOR_BGRA2BGR);
+
+    // Масштабування до 1280x720 зі збереженням пропорцій
+    float scale = std::min(
+        1280.0f / frame.cols,
+        720.0f / frame.rows
+    );
+    cv::resize(frame, frame, cv::Size(), scale, scale, cv::INTER_LINEAR);
 
     DeleteObject(hBitmap);
     DeleteDC(hDC);
     ReleaseDC(NULL, hScreen);
 }
+
 void SimulateMouse(int x, int y, uint8_t action, bool relative = false) {
     INPUT input = { 0 };
     input.type = INPUT_MOUSE;

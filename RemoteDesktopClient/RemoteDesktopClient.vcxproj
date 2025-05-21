@@ -164,10 +164,6 @@
     <ClInclude Include="sqlite3.h" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="bitmap1.bmp" />
-    <Image Include="close.bmp" />
-  </ItemGroup>
-  <ItemGroup>
     <ResourceCompile Include="Resource.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
