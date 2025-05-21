@@ -8,6 +8,7 @@
 #include "user.h"
 #include <cstdio>
 #include <set>
+#include <atomic>
 
 // UI параметри для адаптивного масштабування
 #define UI_BASE_WIDTH 600
@@ -23,7 +24,7 @@ extern HWND hLabelIp, hIpEdit, hStartBtn, hCloseBtn, hDisconnectBtn, hStatusIcon
 extern HWND hGroupBoxAccess, hMouseAccess, hKeyboardAccess;
 extern HWND hLabelPort, hPortEdit, hLabelKey, hKeyEdit;
 extern HWND hLabelClient, hClientEdit, hLogEdit;
-extern bool mouseAccess, keyboardAccess;
+extern std::atomic<bool> mouseAccess, keyboardAccess;
 extern int port;
 static WCHAR bufferPort[256];
 static WCHAR bufferKey[256];

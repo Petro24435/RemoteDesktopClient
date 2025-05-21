@@ -40,7 +40,7 @@ HFONT hServerFont = CreateFont(16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
 HFONT hServerFont2 = CreateFont(16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
     DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
     DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
-extern bool mouseAccess = false, keyboardAccess = false;  // Перемикачі для флажків
+extern std::atomic<bool> mouseAccess = false, keyboardAccess = false;  // Перемикачі для флажків
 void DrawOpenConnectTab(HWND hwnd) 
 {
     std::wstring wip(currentUser.ip.begin(), currentUser.ip.end());
