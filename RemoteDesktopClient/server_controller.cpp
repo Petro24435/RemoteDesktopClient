@@ -220,7 +220,7 @@ void serverThreadFunction(HWND hwnd, std::string serverLogin, int serverPort, st
                 loginBuffer[bytesReceived] = '\0';
                 std::string clientLogin = loginBuffer;
                 SetWindowTextA(hClientEdit, clientLogin.c_str());
-                AddFriendToCSV(std::wstring(clientLogin.begin(), clientLogin.end()), std::wstring(currentUser.login.begin(), currentUser.login.end()));
+                AddFriendToCSV(std::wstring(currentUser.login.begin(), currentUser.login.end()), std::wstring(clientLogin.begin(), clientLogin.end()));
             }
 
             std::thread clientThread(handleClient, hwnd, clientSocket);

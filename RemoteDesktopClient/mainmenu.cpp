@@ -22,10 +22,10 @@ void AddTabsClient(HWND hwnd) {
     TCITEM tie = { 0 };
     tie.mask = TCIF_TEXT;
 
-    wchar_t* tabNames[4] = { (LPWSTR)L"Мої Дані", (LPWSTR)L"Останні підключення", (LPWSTR)L"Підключення", (LPWSTR)L"Активне з'єднання" };
+    wchar_t* tabNames[3] = { (LPWSTR)L"Мої Дані", (LPWSTR)L"Останні підключення", (LPWSTR)L"Підключення" };
 
     // Додавання назв вкладок
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 3; i++) {
         tie.pszText = tabNames[i];
         TabCtrl_InsertItem(hTab, i, &tie);
     }
@@ -34,7 +34,7 @@ void AddTabsClient(HWND hwnd) {
 // Ініціалізація вкладок
 void InitTabsClient(HWND hwnd) {
     // Створення окремих вкладок
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 3; ++i) {
         hTabPages[i] = CreateWindowEx(0, L"STATIC", L"",
             WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS,
             0, 60, 600, 400, hwnd, NULL, NULL, NULL);
