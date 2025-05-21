@@ -44,15 +44,13 @@ void CaptureScreen(cv::Mat& frame) {
     cv::Mat raw(screenHeight, screenWidth, CV_8UC4);
     GetDIBits(hDC, hBitmap, 0, screenHeight, raw.data, (BITMAPINFO*)&bi, DIB_RGB_COLORS);
 
-    // Конвертація BGRA  BGR (OpenCV працює з BGR)
+    // Конвертація BGRA  BGR
     cv::cvtColor(raw, frame, cv::COLOR_BGRA2BGR);
 
-    // Масштабування до 1280x720 зі збереженням пропорцій
-    float scale = std::min(
-        1280.0f / frame.cols,
-        720.0f / frame.rows
-    );
-    cv::resize(frame, frame, cv::Size(), scale, scale, cv::INTER_LINEAR);
+    // Масштабування до 1280x720 (з обрізанням за потреби)
+    //float scale = std::min(1280.0f / frame.cols, 720.0f / frame.rows);
+    //cv::resize(frame, frame, cv::Size(), scale, scale);
+    cv::resize(frame, frame, cv::Size(1280, 720), 0, 0, cv::INTER_LINEAR);
 
     DeleteObject(hBitmap);
     DeleteDC(hDC);

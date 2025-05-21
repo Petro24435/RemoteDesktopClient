@@ -240,9 +240,8 @@ void connectToServer(const std::string& serverIp, int serverPort) {
         });
 
 
-    // Потік прийому зображення
     std::thread imageThread([&]() {
-        const std::string windowName = "Remote Screen (1280x720)";
+        const std::string windowName = "Remote Screen";
         cv::namedWindow(windowName, cv::WINDOW_NORMAL);
         cv::resizeWindow(windowName, 1280, 720); // Фіксований розмір
 
@@ -265,22 +264,18 @@ void connectToServer(const std::string& serverIp, int serverPort) {
             if (!isRunning) break;
 
             cv::Mat img = cv::imdecode(imgData, cv::IMREAD_COLOR);
-            if (img.empty()) continue;
-
-            // Створюємо чорний фон 1280x720
-            cv::Mat displayFrame(720, 1280, CV_8UC3, cv::Scalar(0, 0, 0));
-
-            // Розміщуємо зображення по центру (з обрізанням, якщо потрібно)
-            int xOffset = (1280 - img.cols) / 2;
-            int yOffset = (720 - img.rows) / 2;
-            img.copyTo(displayFrame(cv::Rect(xOffset, yOffset, img.cols, img.rows)));
-
-            cv::imshow(windowName, displayFrame);
-
-            if (cv::waitKey(1) == 27) { // Esc для виходу
-                isRunning = false;
-                break;
+            if (img.empty()) {
+                std::cerr << "Помилка декодування зображення!" << std::endl;
+                continue;
             }
+
+            // Якщо сервер не масштабував зображення – робимо це на клієнті
+            if (img.cols != 1280 || img.rows != 720) {
+                cv::resize(img, img, cv::Size(1280, 720));
+            }
+
+            cv::imshow(windowName, img);
+            if (cv::waitKey(1) == 27) break; // Esc для виходу
         }
         cv::destroyWindow(windowName);
         });
