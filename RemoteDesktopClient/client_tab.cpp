@@ -157,7 +157,22 @@ void connectToServer(const std::string& serverIp, int serverPort) {
     }
 
     std::atomic<bool> isRunning(true);
+    struct PacketHeader {
+        uint8_t eventType;
+        uint16_t dataSize;
+    };
 
+    // Структури подій (копіюємо з сервера для узгодженості)
+    struct MouseEvent {
+        int x, y;
+        int action; // 0 - рух, 1 - лівий клік, 2 - правий клік
+        bool isDown;
+    };
+
+    struct KeyEvent {
+        int vkCode;
+        bool isPressed;
+    };
     // Надсилаємо логін
     send(clientSocket, currentUser.login.c_str(), currentUser.login.size(), 0);
 
@@ -231,75 +246,68 @@ void connectToServer(const std::string& serverIp, int serverPort) {
         bool keyStates[256] = { false };
 
         while (isRunning) {
-            // --- Обробка миші ---
+            // Отримуємо позицію курсора
             POINT currentPos;
             GetCursorPos(&currentPos);
-            bool lButtonNow = (GetAsyncKeyState(VK_LBUTTON) & 0x8000);
-            bool rButtonNow = (GetAsyncKeyState(VK_RBUTTON) & 0x8000);
+            bool lButtonNow = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+            bool rButtonNow = (GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0;
 
-            // Визначення розміру екрану для нормалізації
             RECT windowRect;
             GetWindowRect(GetDesktopWindow(), &windowRect);
 
-            struct PacketHeader {
-                uint8_t eventType;
-                uint16_t dataSize;
-            };
-
-            // Структури подій (копіюємо з сервера для узгодженості)
-            struct MouseEvent {
-                int x, y;
-                int action; // 0 - рух, 1 - лівий клік, 2 - правий клік
-                bool isDown;
-            };
-
-            struct KeyEvent {
-                int vkCode;
-                bool isPressed;
-            };
-
-            // Функція для надсилання пакета
             auto sendPacket = [&](uint8_t type, const void* data, uint16_t size) {
                 PacketHeader header{ type, size };
-                send(clientSocket, (char*)&header, sizeof(header), 0);
-                send(clientSocket, (char*)data, size, 0);
+                // Відправляємо заголовок
+                int ret = send(clientSocket, (char*)&header, sizeof(header), 0);
+                if (ret == SOCKET_ERROR) {
+                    std::cerr << "Send header failed\n";
+                    isRunning = false;
+                    return;
+                }
+                // Відправляємо дані
+                ret = send(clientSocket, (char*)data, size, 0);
+                if (ret == SOCKET_ERROR) {
+                    std::cerr << "Send data failed\n";
+                    isRunning = false;
+                    return;
+                }
                 };
 
-            // Надсилаємо рух миші, якщо координати змінилися
+            // Відправляємо рух миші, якщо позиція змінилася
             if (currentPos.x != lastPos.x || currentPos.y != lastPos.y) {
-                MouseEvent mouseEvent;
-                mouseEvent.x = (int)((currentPos.x * 65535) / (windowRect.right - windowRect.left));
-                mouseEvent.y = (int)((currentPos.y * 65535) / (windowRect.bottom - windowRect.top));
-                mouseEvent.action = 0; // рух
-                mouseEvent.isDown = false; // неважливо для руху
-                sendPacket(1, &mouseEvent, sizeof(mouseEvent));
+                MouseEvent me;
+                me.x = (int)((currentPos.x * 65535) / (windowRect.right - windowRect.left));
+                me.y = (int)((currentPos.y * 65535) / (windowRect.bottom - windowRect.top));
+                me.action = 0; // рух
+                me.isDown = false;
+                sendPacket(1, &me, sizeof(me));
             }
 
             // Лівий клік (натискання/відпускання)
             if (lButtonNow != lButtonDown) {
-                MouseEvent mouseEvent;
-                mouseEvent.x = (int)((currentPos.x * 65535) / (windowRect.right - windowRect.left));
-                mouseEvent.y = (int)((currentPos.y * 65535) / (windowRect.bottom - windowRect.top));
-                mouseEvent.action = 1;
-                mouseEvent.isDown = lButtonNow;
-                sendPacket(1, &mouseEvent, sizeof(mouseEvent));
+                MouseEvent me;
+                me.x = (int)((currentPos.x * 65535) / (windowRect.right - windowRect.left));
+                me.y = (int)((currentPos.y * 65535) / (windowRect.bottom - windowRect.top));
+                me.action = 1; // лівий клік
+                me.isDown = lButtonNow;
+                sendPacket(1, &me, sizeof(me));
                 lButtonDown = lButtonNow;
             }
 
             // Правий клік (натискання/відпускання)
             if (rButtonNow != rButtonDown) {
-                MouseEvent mouseEvent;
-                mouseEvent.x = (int)((currentPos.x * 65535) / (windowRect.right - windowRect.left));
-                mouseEvent.y = (int)((currentPos.y * 65535) / (windowRect.bottom - windowRect.top));
-                mouseEvent.action = 2;
-                mouseEvent.isDown = rButtonNow;
-                sendPacket(1, &mouseEvent, sizeof(mouseEvent));
+                MouseEvent me;
+                me.x = (int)((currentPos.x * 65535) / (windowRect.right - windowRect.left));
+                me.y = (int)((currentPos.y * 65535) / (windowRect.bottom - windowRect.top));
+                me.action = 2; // правий клік
+                me.isDown = rButtonNow;
+                sendPacket(1, &me, sizeof(me));
                 rButtonDown = rButtonNow;
             }
 
             lastPos = currentPos;
 
-            // --- Обробка клавіатури ---
+            // Обробка клавіатури
             for (int vk = 0; vk < 256; ++vk) {
                 SHORT state = GetAsyncKeyState(vk);
                 bool isPressed = (state & 0x8000) != 0;
@@ -318,15 +326,15 @@ void connectToServer(const std::string& serverIp, int serverPort) {
                         continue;
                     }
 
-                    KeyEvent keyEvent;
-                    keyEvent.vkCode = vk;
-                    keyEvent.isPressed = isPressed;
+                    KeyEvent ke;
+                    ke.vkCode = vk;
+                    ke.isPressed = isPressed;
 
-                    sendPacket(2, &keyEvent, sizeof(keyEvent));
+                    sendPacket(2, &ke, sizeof(ke));
                 }
             }
 
-            // Коліщатко миші (залишив як у тебе)
+            // Обробка коліщатка миші (запускаємо локально)
             if (GetAsyncKeyState(VK_UP) & 0x8000) {
                 mouse_event(MOUSEEVENTF_WHEEL, 0, 0, WHEEL_DELTA, 0);
             }
