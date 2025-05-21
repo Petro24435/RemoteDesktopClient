@@ -40,7 +40,7 @@ HFONT hServerFont = CreateFont(16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
 HFONT hServerFont2 = CreateFont(16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
     DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
     DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
-bool mouseAccess = false, keyboardAccess = false;  // Перемикачі для флажків
+extern bool mouseAccess = false, keyboardAccess = false;  // Перемикачі для флажків
 void DrawOpenConnectTab(HWND hwnd) 
 {
     std::wstring wip(currentUser.ip.begin(), currentUser.ip.end());
@@ -150,21 +150,9 @@ LRESULT CALLBACK ConnectManagingTabWndProc(HWND hwnd, UINT msg, WPARAM wParam, L
 
         case 4008: {  // Флажок миші
                 mouseAccess = !mouseAccess;
-                if (mouseAccess) {
-                    SendMessage(hMouseAccess, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BITMAP_MOUSE_ON)));
-                }
-                else {
-                    SendMessage(hMouseAccess, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BITMAP_MOUSE_OFF)));
-                }
             }
         case 4009: {  // Флажок клавіатури
                 keyboardAccess = !keyboardAccess;
-                if (keyboardAccess) {
-                    SendMessage(hKeyboardAccess, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BITMAP_KEYBOARD_ON)));
-                }
-                else {
-                    SendMessage(hKeyboardAccess, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BITMAP_KEYBOARD_OFF)));
-                }
             }
             break;
         case 4006:

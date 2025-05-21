@@ -14,6 +14,7 @@
 #include <opencv2/opencv.hpp>
 #include <algorithm>
 #include <cmath>
+#include <atomic>
 #include "serverUserRegistration.h"
 #include "client_tab.h"
 #include "user.h"
@@ -24,7 +25,8 @@
 ClientTabData clientTabData;
 extern ClientInfo currentClient;
 SOCKET clientSocket = INVALID_SOCKET; // ƒл€ з'Їднанн€ з сервером
-
+std::atomic<bool> isRunning(true);
+std::atomic<bool> blockHotkeys(false); // „и блокувати гар€ч≥ клав≥ш≥
 bool decodeKey(const std::string& key, std::string& ipOut, std::string& loginOut, int port);
 void connectToServer(const std::string& serverIp, int serverPort);
 // ќбробник под≥й вкладки кл≥Їнта
@@ -221,7 +223,48 @@ void connectToServer(const std::string& serverIp, int serverPort) {
         Sleep(10); // ќптимальна затримка дл€ плавност≥
         }
         });
+    std::thread keyboardThread([&]() {
+        bool keyStates[256] = { false };
 
+        while (isRunning) {
+            // ѕерев≥р€Їмо стан кожноњ клав≥ш≥
+            for (int vk = 0; vk < 256; ++vk) {
+                SHORT state = GetAsyncKeyState(vk);
+                bool isPressed = (state & 0x8000) != 0;
+
+                // якщо стан зм≥нивс€
+                if (isPressed != keyStates[vk]) {
+                    keyStates[vk] = isPressed;
+
+                    // ѕерев≥р€Їмо комб≥нац≥ю Ctrl+Esc дл€ перемиканн€ режиму
+                    if (vk == VK_ESCAPE && (GetAsyncKeyState(VK_CONTROL) & 0x8000)) {
+                        blockHotkeys = !blockHotkeys;
+                        continue;
+                    }
+
+                    // якщо в режим≥ блокуванн€ гар€чих клав≥ш, пропускаЇмо спецклав≥ш≥
+                    if (blockHotkeys &&
+                        (vk == VK_LWIN || vk == VK_RWIN || vk == VK_CONTROL ||
+                            vk == VK_MENU || vk == VK_SHIFT || vk == VK_ESCAPE)) {
+                        continue;
+                    }
+
+                    // ‘ормуЇмо пакет даних
+                    struct {
+                        int vkCode;
+                        bool isPressed;
+                    } keyEvent;
+
+                    keyEvent.vkCode = vk;
+                    keyEvent.isPressed = isPressed;
+
+                    // ¬≥дправл€Їмо на сервер
+                    send(clientSocket, (char*)&keyEvent, sizeof(keyEvent), 0);
+                }
+            }
+            Sleep(10); // ќптимальна затримка
+        }
+        });
 
     std::thread imageThread([&]() {
         const std::string windowName = "Remote Screen";
@@ -281,6 +324,7 @@ void connectToServer(const std::string& serverIp, int serverPort) {
     imageThread.join();
     isRunning = false;
     mouseThread.join();
+    keyboardThread.join();
 
     closesocket(clientSocket);
     WSACleanup();
