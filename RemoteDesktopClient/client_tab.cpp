@@ -162,7 +162,7 @@ void connectToServer(const std::string& serverIp, int serverPort) {
     send(clientSocket, currentUser.login.c_str(), currentUser.login.size(), 0);
 
     // Потік передачі миші
-    std::thread mouseThread([&]() {
+    /*std::thread mouseThread([&]() {
          POINT lastPos = { -1, -1 };
     bool lButtonDown = false;
     bool rButtonDown = false;
@@ -222,47 +222,119 @@ void connectToServer(const std::string& serverIp, int serverPort) {
         lastPos = currentPos;
         Sleep(10); // Оптимальна затримка для плавності
         }
-        });
-    std::thread keyboardThread([&]() {
+        });*/
+
+    std::thread mouseAndKeyboardThread([&]() {
+        POINT lastPos = { -1, -1 };
+        bool lButtonDown = false;
+        bool rButtonDown = false;
         bool keyStates[256] = { false };
 
         while (isRunning) {
-            // Перевіряємо стан кожної клавіші
+            // --- Обробка миші ---
+            POINT currentPos;
+            GetCursorPos(&currentPos);
+            bool lButtonNow = (GetAsyncKeyState(VK_LBUTTON) & 0x8000);
+            bool rButtonNow = (GetAsyncKeyState(VK_RBUTTON) & 0x8000);
+
+            // Визначення розміру екрану для нормалізації
+            RECT windowRect;
+            GetWindowRect(GetDesktopWindow(), &windowRect);
+
+            struct PacketHeader {
+                uint8_t eventType;
+                uint16_t dataSize;
+            };
+
+            // Структури подій (копіюємо з сервера для узгодженості)
+            struct MouseEvent {
+                int x, y;
+                int action; // 0 - рух, 1 - лівий клік, 2 - правий клік
+                bool isDown;
+            };
+
+            struct KeyEvent {
+                int vkCode;
+                bool isPressed;
+            };
+
+            // Функція для надсилання пакета
+            auto sendPacket = [&](uint8_t type, const void* data, uint16_t size) {
+                PacketHeader header{ type, size };
+                send(clientSocket, (char*)&header, sizeof(header), 0);
+                send(clientSocket, (char*)data, size, 0);
+                };
+
+            // Надсилаємо рух миші, якщо координати змінилися
+            if (currentPos.x != lastPos.x || currentPos.y != lastPos.y) {
+                MouseEvent mouseEvent;
+                mouseEvent.x = (int)((currentPos.x * 65535) / (windowRect.right - windowRect.left));
+                mouseEvent.y = (int)((currentPos.y * 65535) / (windowRect.bottom - windowRect.top));
+                mouseEvent.action = 0; // рух
+                mouseEvent.isDown = false; // неважливо для руху
+                sendPacket(1, &mouseEvent, sizeof(mouseEvent));
+            }
+
+            // Лівий клік (натискання/відпускання)
+            if (lButtonNow != lButtonDown) {
+                MouseEvent mouseEvent;
+                mouseEvent.x = (int)((currentPos.x * 65535) / (windowRect.right - windowRect.left));
+                mouseEvent.y = (int)((currentPos.y * 65535) / (windowRect.bottom - windowRect.top));
+                mouseEvent.action = 1;
+                mouseEvent.isDown = lButtonNow;
+                sendPacket(1, &mouseEvent, sizeof(mouseEvent));
+                lButtonDown = lButtonNow;
+            }
+
+            // Правий клік (натискання/відпускання)
+            if (rButtonNow != rButtonDown) {
+                MouseEvent mouseEvent;
+                mouseEvent.x = (int)((currentPos.x * 65535) / (windowRect.right - windowRect.left));
+                mouseEvent.y = (int)((currentPos.y * 65535) / (windowRect.bottom - windowRect.top));
+                mouseEvent.action = 2;
+                mouseEvent.isDown = rButtonNow;
+                sendPacket(1, &mouseEvent, sizeof(mouseEvent));
+                rButtonDown = rButtonNow;
+            }
+
+            lastPos = currentPos;
+
+            // --- Обробка клавіатури ---
             for (int vk = 0; vk < 256; ++vk) {
                 SHORT state = GetAsyncKeyState(vk);
                 bool isPressed = (state & 0x8000) != 0;
 
-                // Якщо стан змінився
                 if (isPressed != keyStates[vk]) {
                     keyStates[vk] = isPressed;
 
-                    // Перевіряємо комбінацію Ctrl+Esc для перемикання режиму
                     if (vk == VK_ESCAPE && (GetAsyncKeyState(VK_CONTROL) & 0x8000)) {
                         blockHotkeys = !blockHotkeys;
                         continue;
                     }
 
-                    // Якщо в режимі блокування гарячих клавіш, пропускаємо спецклавіші
                     if (blockHotkeys &&
                         (vk == VK_LWIN || vk == VK_RWIN || vk == VK_CONTROL ||
                             vk == VK_MENU || vk == VK_SHIFT || vk == VK_ESCAPE)) {
                         continue;
                     }
 
-                    // Формуємо пакет даних
-                    struct {
-                        int vkCode;
-                        bool isPressed;
-                    } keyEvent;
-
+                    KeyEvent keyEvent;
                     keyEvent.vkCode = vk;
                     keyEvent.isPressed = isPressed;
 
-                    // Відправляємо на сервер
-                    send(clientSocket, (char*)&keyEvent, sizeof(keyEvent), 0);
+                    sendPacket(2, &keyEvent, sizeof(keyEvent));
                 }
             }
-            Sleep(10); // Оптимальна затримка
+
+            // Коліщатко миші (залишив як у тебе)
+            if (GetAsyncKeyState(VK_UP) & 0x8000) {
+                mouse_event(MOUSEEVENTF_WHEEL, 0, 0, WHEEL_DELTA, 0);
+            }
+            else if (GetAsyncKeyState(VK_DOWN) & 0x8000) {
+                mouse_event(MOUSEEVENTF_WHEEL, 0, 0, -WHEEL_DELTA, 0);
+            }
+
+            Sleep(10);
         }
         });
 
@@ -323,8 +395,8 @@ void connectToServer(const std::string& serverIp, int serverPort) {
     // Очікуємо завершення
     imageThread.join();
     isRunning = false;
-    mouseThread.join();
-    keyboardThread.join();
+    mouseAndKeyboardThread.join();
+    //keyboardThread.join();
 
     closesocket(clientSocket);
     WSACleanup();

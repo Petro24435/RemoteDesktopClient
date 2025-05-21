@@ -50,4 +50,7 @@ void addConnection(   HWND hwnd, const std::string& serverLogin, int serverPort,
 void removeConnection(HWND hwnd, const std::string& serverLogin, int serverPort);													// Знищує Сервер
 void updateConnection(HWND hwnd, int serverPort, const std::string& clientLogin, const std::string& clientIp);		// Оновлює Сервер при доєднанні клієнта
 void disconnectClient(HWND hwnd, int serverPort);									// Оновлює Сервер при від'єднанні клієнта
+
+
+
 #endif // SERVER_TAB_H

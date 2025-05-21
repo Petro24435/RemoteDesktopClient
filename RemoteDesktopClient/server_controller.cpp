@@ -35,6 +35,8 @@ bool serverRunning = false;  // Флаг для перевірки, чи сервер вже запущений
 void logMessage(HWND hwnd, const std::string& message);
 std::unordered_map<int, bool> keyStates;
 
+
+
 void CaptureScreen(cv::Mat& frame) {
     HDC hScreen = GetDC(NULL);
     HDC hDC = CreateCompatibleDC(hScreen);
@@ -100,7 +102,7 @@ bool initializeServer(HWND hwnd, const std::string& serverIp, int serverPort) {
 void handleClient(HWND hwnd, SOCKET clientSocket) {
     std::atomic<bool> running = true;
 
-    std::thread mouseRecvThread([&]() {
+    /*std::thread mouseRecvThread([&]() {
         struct MouseEvent {
             int x, y;
             int action; // 0 - рух, 1 - лівий клік, 2 - правий клік
@@ -112,7 +114,7 @@ void handleClient(HWND hwnd, SOCKET clientSocket) {
             int bytesReceived = recv(clientSocket, (char*)&event, sizeof(event), 0);
 
             if (bytesReceived <= 0) break; // З'єднання розірвано
-            if(mouseAccess)
+            //if(mouseAccess)
             {
                 // Отримуємо розмір екрана сервера для денормалізації координат
                 int screenWidth = GetSystemMetrics(SM_CXSCREEN);
@@ -140,29 +142,68 @@ void handleClient(HWND hwnd, SOCKET clientSocket) {
                 }
             }
         }
-        });
+        });*/
 
-    std::thread keyboardRecvThread([&]() {
-        struct KeyEvent {
-            int vkCode;
-            bool isPressed;
-        };
+    std::thread mouseAndKeyboardRecvThread([&]() {
 
-        while (true) {
-            KeyEvent event;
-            int bytesReceived = recv(clientSocket, (char*)&event, sizeof(event), 0);
+        while (running) {
+            uint8_t eventType = 0;
+            int ret = recv(clientSocket, (char*)&eventType, 1, 0);
+            if (ret <= 0) break;
 
-            if (bytesReceived <= 0) break; // З'єднання розірвано
-            if (keyboardAccess)
-            {
-                // Імітуємо натискання/відпускання клавіші
+            if (eventType == 1) { // Mouse event
+                uint8_t action = 0;
+                int32_t x = 0, y = 0;
+                uint8_t isDown = 0;
+
+                ret = recv(clientSocket, (char*)&action, 1, 0);
+                if (ret <= 0) break;
+                ret = recv(clientSocket, (char*)&x, 4, 0);
+                if (ret <= 0) break;
+                ret = recv(clientSocket, (char*)&y, 4, 0);
+                if (ret <= 0) break;
+                ret = recv(clientSocket, (char*)&isDown, 1, 0);
+                if (ret <= 0) break;
+
+                int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+                int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+
+                int targetX = (x * screenWidth) / 65535;
+                int targetY = (y * screenHeight) / 65535;
+
+                switch (action) {
+                case 0:
+                    SetCursorPos(targetX, targetY);
+                    break;
+                case 1:
+                    mouse_event(isDown ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+                    break;
+                case 2:
+                    mouse_event(isDown ? MOUSEEVENTF_RIGHTDOWN : MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
+                    break;
+                }
+            }
+            else if (eventType == 2) { // Keyboard event
+                int32_t vkCode = 0;
+                uint8_t isPressed = 0;
+
+                ret = recv(clientSocket, (char*)&vkCode, 4, 0);
+                if (ret <= 0) break;
+                ret = recv(clientSocket, (char*)&isPressed, 1, 0);
+                if (ret <= 0) break;
+
                 INPUT input = { 0 };
                 input.type = INPUT_KEYBOARD;
-                input.ki.wVk = event.vkCode;
-                input.ki.dwFlags = event.isPressed ? 0 : KEYEVENTF_KEYUP;
+                input.ki.wVk = vkCode;
+                input.ki.dwFlags = isPressed ? 0 : KEYEVENTF_KEYUP;
                 SendInput(1, &input, sizeof(INPUT));
             }
-        }});
+            else {
+                // Невідомий тип події
+                break;
+            }
+        }
+        });
     // Основний цикл відео
     cv::Mat frame_raw, frame_bgr;
     std::vector<uchar> buffer;
@@ -182,8 +223,8 @@ void handleClient(HWND hwnd, SOCKET clientSocket) {
 
     running = false;
     closesocket(clientSocket);
-    if (mouseRecvThread.joinable()) mouseRecvThread.join();
-    if (keyboardRecvThread.joinable()) keyboardRecvThread.join();
+    //if (mouseRecvThread.joinable()) mouseRecvThread.join();
+    if (mouseAndKeyboardRecvThread.joinable()) mouseAndKeyboardRecvThread.join();
 }
 
 
