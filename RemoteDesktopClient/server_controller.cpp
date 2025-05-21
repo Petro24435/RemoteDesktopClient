@@ -410,11 +410,11 @@ bool PostJson(const std::string& url, const std::string& jsonData, std::string& 
     return (res == CURLE_OK);
 }
 void logMessage(HWND hwnd, const std::string& message) {
-    std::ofstream logFile("server_log.txt", std::ios::app);
-    if (logFile.is_open()) {
-        logFile << message << std::endl;
-        logFile.close();
-    }
+    //std::ofstream logFile("server_log.txt", std::ios::app);
+    //if (logFile.is_open()) {
+    //    logFile << message << std::endl;
+    //    logFile.close();
+    //}
     if (hwnd != NULL) {
         HWND hStatusEdit = hLogEdit;
         if (hStatusEdit) {

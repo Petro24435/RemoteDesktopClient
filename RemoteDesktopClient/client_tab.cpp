@@ -226,7 +226,11 @@ void connectToServer(const std::string& serverIp, int serverPort) {
     std::thread imageThread([&]() {
         const std::string windowName = "Remote Screen";
         cv::namedWindow(windowName, cv::WINDOW_NORMAL);
-        cv::resizeWindow(windowName, 1280, 720); // Фіксований розмір
+        cv::setWindowProperty(windowName, cv::WND_PROP_FULLSCREEN, cv::WINDOW_FULLSCREEN);
+
+        // Отримуємо розміри екрана
+        int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+        int screenHeight = GetSystemMetrics(SM_CYSCREEN);
 
         while (isRunning) {
             int imgSize = 0;
@@ -252,14 +256,22 @@ void connectToServer(const std::string& serverIp, int serverPort) {
                 continue;
             }
 
-            // Якщо сервер не масштабував зображення – робимо це на клієнті
-            if (img.cols != 1280 || img.rows != 720) {
-                cv::resize(img, img, cv::Size(1280, 720));
-            }
+            // Масштабування зі збереженням пропорцій
+            float scale = min(
+                (float)screenWidth / img.cols,
+                (float)screenHeight / img.rows
+            );
+            cv::resize(img, img, cv::Size(), scale, scale);
 
+            // Відображення у повноекранному режимі
             cv::imshow(windowName, img);
-            if (cv::waitKey(1) == 27) break; // Esc для виходу
+
+            if (cv::waitKey(1) == 27) { // Вихід по ESC
+                isRunning = false;
+                break;
+            }
         }
+
         cv::destroyWindow(windowName);
         });
 
