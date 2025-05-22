@@ -13,8 +13,8 @@
 
 
 // Базовий розмір вікна, для масштабування
-#define UI_BASE_WIDTH       400
-#define UI_BASE_HEIGHT      250
+#define UI_BASE_WIDTH       700
+#define UI_BASE_HEIGHT      300
 
 // Початкові позиції і розміри (в пікселях при базовому масштабі)
 #define UI_X_LABEL          20

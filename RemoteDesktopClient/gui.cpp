@@ -19,7 +19,7 @@ ClientInfo currentClient;
 HWND hwndLabelUsername, hwndEditUsername;
 HWND hwndLabelPassword, hwndEditPassword;
 HWND hwndButtonLogin, hwndButtonRegister;
-HWND hwndLabelDevelopersInfo;
+HWND hwndLabelHelpInfo, hwndLabelDevelopersInfo;
 static HBRUSH hWhiteBrush = CreateSolidBrush(RGB(255, 255, 255)); // білий фон
 // Прототипи функцій
 LRESULT CALLBACK WndProcLogin(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
@@ -35,23 +35,31 @@ void CreateControls(HWND hwnd) {
     CreateWindowEx(0, L"BUTTON", L"Клієнт", WS_CHILD | WS_VISIBLE | BS_AUTORADIOBUTTON,
         0, 0, 0, 0, hwnd, (HMENU)IDC_RADIO_CLIENT, NULL, NULL);
 
-    hwndLabelUsername = CreateWindowEx(0, L"STATIC", L"Username:", WS_CHILD | WS_VISIBLE,
+    hwndLabelUsername = CreateWindowEx(0, L"STATIC", L"Логін:", WS_CHILD | WS_VISIBLE,
         0, 0, 0, 0, hwnd, (HMENU)IDC_LABEL_USERNAME, NULL, NULL);
 
     hwndEditUsername = CreateWindowEx(0, L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT,
         0, 0, 0, 0, hwnd, (HMENU)IDC_EDIT_USERNAME, NULL, NULL);
 
-    hwndLabelPassword = CreateWindowEx(0, L"STATIC", L"Password:", WS_CHILD | WS_VISIBLE,
+    hwndLabelPassword = CreateWindowEx(0, L"STATIC", L"Пароль:", WS_CHILD | WS_VISIBLE,
         0, 0, 0, 0, hwnd, (HMENU)IDC_LABEL_PASSWORD, NULL, NULL);
 
     hwndEditPassword = CreateWindowEx(0, L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_PASSWORD,
         0, 0, 0, 0, hwnd, (HMENU)IDC_EDIT_PASSWORD, NULL, NULL);
 
-    hwndButtonLogin = CreateWindowEx(0, L"BUTTON", L"Login", WS_CHILD | WS_VISIBLE,
+    hwndButtonLogin = CreateWindowEx(0, L"BUTTON", L"Залогінитись", WS_CHILD | WS_VISIBLE,
         0, 0, 0, 0, hwnd, (HMENU)IDC_BUTTON_LOGIN, NULL, NULL);
 
-    hwndButtonRegister = CreateWindowEx(0, L"BUTTON", L"Register", WS_CHILD | WS_VISIBLE,
+    hwndButtonRegister = CreateWindowEx(0, L"BUTTON", L"Зареєструватись", WS_CHILD | WS_VISIBLE,
         0, 0, 0, 0, hwnd, (HMENU)IDC_BUTTON_REGISTER, NULL, NULL);
+
+    hwndLabelHelpInfo = CreateWindowEx(0, L"STATIC", L"Вітаємо. Ця програма була розроблена для з'єднання між різними ПК під ОС Windows\
+\nДля показу свого екрану виберіть вгорі цього вікна пункт \"Сервер\", та залогіньтесь. Введіть бажаний порт, або виберіть наданий і відкрийте з'єднання\
+\nПерейдіть на вкладку \"Управління З'єднанням\" та надайте бажані дозволи Клієнту\
+\nДля пеергляду екрану Сервера виберіть вгорі цього вікна пункт \"Клієнт\", та залогіньтесь\
+\nВведіть Логін користувача, з яким плануєте з'єднатись. Введіть також надані ним ключ і порт. Після того натисність \"Підключитись\"\
+\nЯкщо ви маєте будь-які питання чи пропозиції напишіть е-листа на тему проблеми на пошту nazarii.antonyk.ki.2022@lpnu.ua", WS_CHILD | WS_VISIBLE,
+        0, 0, 0, 0, hwnd, (HMENU)IDC_LABEL_DEVELOPERS_INFO, NULL, NULL);
 
     hwndLabelDevelopersInfo = CreateWindowEx(0, L"STATIC", L"Developers: Antonyk Nazarii, Solomchak Petro April - May 2025", WS_CHILD | WS_VISIBLE,
         0, 0, 0, 0, hwnd, (HMENU)IDC_LABEL_DEVELOPERS_INFO, NULL, NULL);
@@ -158,12 +166,15 @@ LRESULT CALLBACK WndProcLogin(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             sx(UI_WIDTH_EDIT), sy(UI_HEIGHT_LINE), TRUE);
 
         MoveWindow(hwndButtonLogin, sx(UI_X_LABEL), sy(UI_Y_BUTTONS),
-            sx(UI_WIDTH_BUTTON), sy(UI_HEIGHT_BUTTON), TRUE);
+            sx(UI_WIDTH_BUTTON + 10), sy(UI_HEIGHT_BUTTON), TRUE);
 
-        MoveWindow(hwndButtonRegister, sx(UI_X_LABEL + UI_WIDTH_BUTTON + 20), sy(UI_Y_BUTTONS),
-            sx(UI_WIDTH_BUTTON), sy(UI_HEIGHT_BUTTON), TRUE);
+        MoveWindow(hwndButtonRegister, sx(UI_X_LABEL + UI_WIDTH_BUTTON + 30), sy(UI_Y_BUTTONS),
+            sx(UI_WIDTH_BUTTON + 10), sy(UI_HEIGHT_BUTTON), TRUE);
         
-        MoveWindow(hwndLabelDevelopersInfo, sx(20), sy(UI_BASE_HEIGHT - UI_HEIGHT_BUTTON - 20), sx(UI_BASE_WIDTH - 40), sy(UI_HEIGHT_BUTTON), TRUE);
+        MoveWindow(hwndLabelHelpInfo, sx(20), sy(UI_BASE_HEIGHT - UI_HEIGHT_BUTTON -125), sx(UI_BASE_WIDTH - 40), sy(UI_HEIGHT_BUTTON+120), TRUE);
+
+        MoveWindow(hwndLabelDevelopersInfo, sx(20), sy(UI_BASE_HEIGHT - UI_HEIGHT_BUTTON +10 ), sx(UI_BASE_WIDTH - 40), sy(UI_HEIGHT_BUTTON - 10), TRUE);
+
 
         MoveWindow(GetDlgItem(hwnd, IDC_LABEL_ROLE), sx(UI_X_LABEL), sy(5),
             sx(UI_WIDTH_LABEL), sy(UI_HEIGHT_LINE), TRUE);
@@ -184,7 +195,7 @@ LRESULT CALLBACK WndProcLogin(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             hwndLabelUsername, hwndEditUsername,
             hwndLabelPassword, hwndEditPassword,
             hwndButtonLogin, hwndButtonRegister,
-            hwndLabelDevelopersInfo,
+            hwndLabelHelpInfo, hwndLabelDevelopersInfo,
             GetDlgItem(hwnd, IDC_LABEL_ROLE),
             GetDlgItem(hwnd, IDC_RADIO_SERVER),
             GetDlgItem(hwnd, IDC_RADIO_CLIENT),

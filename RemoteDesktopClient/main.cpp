@@ -70,7 +70,7 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
         L"RemoteDesktopClientLogin",  // Зареєстрований клас для логін-вікна
         L"Remote Desktop Client",
         WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT, 400, 250,
+        CW_USEDEFAULT, CW_USEDEFAULT, 1000,520, //400, 250,
         NULL, NULL, hInstance, NULL
     );
 
