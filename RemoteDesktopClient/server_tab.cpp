@@ -12,7 +12,6 @@
 #include <cstdio>
 #include "server_tab.h"
 #include "serverUserRegistration.h"
-#include "resource.h"
 
 int port;
 extern UserInfo currentUser;
@@ -54,23 +53,8 @@ void DrawOpenConnectTab(HWND hwnd)
     hStartBtn = CreateWindowEx(0, L"BUTTON", L"Відкрити сервер", WS_CHILD | WS_VISIBLE | WS_BORDER,\
         370, 20, 150, 25, hwnd, (HMENU)4002, NULL, NULL);
 
-    //hCloseBtn = CreateWindowEx(0, L"BUTTON", L"Закрити з'єднання", WS_CHILD | WS_VISIBLE | WS_BORDER,\
-        370, 60, 150, 25, hwnd, (HMENU)4008, NULL, NULL);
-
-    //hDisconnectBtn = CreateWindowEx(0, L"BUTTON", L"Від'єднати Клієнта", WS_CHILD | WS_VISIBLE | WS_BORDER,\
-        370, 100, 150, 25, hwnd, (HMENU)4011, NULL, NULL);
-
     hStatusIcon = CreateWindowEx(0, L"STATIC", NULL, WS_CHILD | WS_VISIBLE | SS_OWNERDRAW,
         530, 23, 20, 20, hwnd, (HMENU)4003, NULL, NULL);
-
-    //hGroupBoxAccess = CreateWindowEx(0, L"STATIC", L"Доступ:", WS_CHILD | WS_VISIBLE ,\
-        10, 40, 180, 80, hwnd, NULL, NULL, NULL);
-
-    //hMouseAccess = CreateWindowEx(0, L"BUTTON", L"Миша", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,\
-        20, 60, 150, 20, hwnd, (HMENU)4002, NULL, NULL);
-
-    //hKeyboardAccess = CreateWindowEx(0, L"BUTTON", L"Клавіатура", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,\
-        20, 90, 150, 20, hwnd, (HMENU)4003, NULL, NULL);
 
     hLabelPort = CreateWindowEx(0, L"STATIC", L"Порт:", WS_CHILD | WS_VISIBLE,
         20, 130, 100, 20, hwnd, NULL, NULL, NULL);
@@ -83,15 +67,6 @@ void DrawOpenConnectTab(HWND hwnd)
 
     hKeyEdit = CreateWindowEx(0, L"EDIT", NULL, WS_VISIBLE | WS_CHILD | WS_BORDER,
         130, 170, 300, 25, hwnd, (HMENU)4005, NULL, NULL);
-
-    //hLabelClient = CreateWindowEx(0, L"STATIC", L"Клієнт:", WS_CHILD | WS_VISIBLE,\
-        20, 210, 100, 20, hwnd, NULL, NULL, NULL);
-
-    //hClientEdit = CreateWindowEx(0, L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY,\
-        130, 210, 200, 25, hwnd, (HMENU)4006, NULL, NULL);
-
-    //hLogEdit = CreateWindowEx(0, L"EDIT", L"Очікування...", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY | ES_MULTILINE,\
-        20, 220, 550, 50, hwnd, (HMENU)4009, NULL, NULL);
 
     FillPort(hwnd);
     FillKey(hwnd);
@@ -119,25 +94,6 @@ void DrawConnectManagingTab(HWND hwnd)
         130, 210, 200, 25, hwnd, (HMENU)4010, NULL, NULL);
     hLogEdit = CreateWindowEx(0, L"EDIT", L"Очікування...", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_READONLY | ES_MULTILINE,
         20, 220, 550, 50, hwnd, (HMENU)4011, NULL, NULL);
-
-    //// Встановлення зображень для кнопок
-    //SendMessage(hCloseBtn, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BITMAP_CLOSE)));
-    //SendMessage(hDisconnectBtn, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BITMAP_DISCONNECT)));
-
-    //// Для флажків змінюємо зображення залежно від стану
-    //if (mouseAccess) {
-    //    SendMessage(hMouseAccess, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BITMAP_MOUSE_ON)));
-    //}
-    //else {
-    //    SendMessage(hMouseAccess, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BITMAP_MOUSE_OFF)));
-    //}
-
-    //if (keyboardAccess) {
-    //    SendMessage(hKeyboardAccess, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BITMAP_KEYBOARD_ON)));
-    //}
-    //else {
-    //    SendMessage(hKeyboardAccess, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)LoadBitmap(hInst, MAKEINTRESOURCE(IDB_BITMAP_KEYBOARD_OFF)));
-    //}
 }
 
 // Функція для обробки подій вкладки Server

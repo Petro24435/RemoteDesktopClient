@@ -4,13 +4,13 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <thread>
+#include <atomic>
+#include <chrono>
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <cctype>
-#include <thread>
-#include <atomic>
-#include <chrono>
 #include <opencv2/opencv.hpp>
 #include <algorithm>
 #include <cmath>
@@ -100,18 +100,14 @@ LRESULT CALLBACK ClientTabWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                 // Закриваємо сокет
                 closesocket(clientSocket);
                 clientSocket = INVALID_SOCKET;
-
-                // Очищаємо ресурси Winsock
                 WSACleanup();
-
-                // Очищаємо таблицю активних підключень (якщо необхідно)
-                // (Додатково, можна додати код для видалення цього з'єднання з таблиці активних з'єднань)
-
-                // Виводимо повідомлення про успішне відключення
+                wchar_t buffer[16];
+                GetWindowText(GetDlgItem(hwnd, 3013), buffer, 16);
+                int port = wcstol(buffer, NULL, 10);
+                disconnectClient(hLogEdit, port);
                 MessageBox(hwnd, L"Від'єднано від сервера", L"Успіх", MB_OK);
 
-                // Можна оновити інтерфейс (наприклад, відключити кнопки або поля вводу)
-            }
+                }
             else {
                 MessageBox(hwnd, L"Немає активного з'єднання", L"Помилка", MB_ICONERROR);
             }

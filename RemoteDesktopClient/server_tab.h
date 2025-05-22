@@ -33,23 +33,22 @@ static COLORREF currentStatusColor;
 void setStatusColor(HWND hwnd, char c);
 
 
-void DrawOpenConnectTab(HWND hwnd);  											// Створює вкладку
-void DrawConnectManagingTab(HWND hwnd);  											// Створює вкладку
-void InitOpenConnectTab(HWND hwnd); 												// Ініціалізація DrawST і обробника подій 
-void InitConnectManagingTab(HWND hwnd); 												// Ініціалізація DrawST і обробника подій 
-void FillPort(HWND hwnd);  													// Шукає вільний і заповнює порт
-void FillKey(HWND hwnd);													// Заповнює поле ключа
+void DrawOpenConnectTab(HWND hwnd); // Створює вкладку
+void DrawConnectManagingTab(HWND hwnd); // Створює вкладку
+void InitOpenConnectTab(HWND hwnd); // Ініціалізація DrawST і обробника подій 
+void InitConnectManagingTab(HWND hwnd); // Ініціалізація DrawST і обробника подій 
+void FillPort(HWND hwnd); // Шукає вільний і заповнює порт
+void FillKey(HWND hwnd); // Заповнює поле ключа
 std::string generateKey(const std::string& ip, const std::string& login, int port);	// Генерує ключ методом шифрування
-void downloadCSVFromDropbox(const std::string& dropboxFilePath);			// Пізніше реалізуємо хмарне сховище
-void updatePortsTable(const std::string& newPort);							// Оновлення портів
-void updateKeysTable(const std::string& newKey);							// Оновлення ключів
-void cleanUnusedPortsAndKeys();												// Очищення використовуваних ключів
-std::set<int> getUsedPorts();												// Отримування системної інформації про поточні порти
+void updatePortsTable(const std::string& newPort); // Оновлення портів
+void updateKeysTable(const std::string& newKey); // Оновлення ключів
+void cleanUnusedPortsAndKeys(); // Очищення використовуваних ключів
+std::set<int> getUsedPorts(); // Отримування системної інформації про поточні порти
 																									
-void addConnection(   HWND hwnd, const std::string& serverLogin, int serverPort, const std::string& serverKey, const std::string& serverIp);		// Додає Сервер
-void removeConnection(HWND hwnd, const std::string& serverLogin, int serverPort);													// Знищує Сервер
-void updateConnection(HWND hwnd, int serverPort, const std::string& clientLogin, const std::string& clientIp);		// Оновлює Сервер при доєднанні клієнта
-void disconnectClient(HWND hwnd, int serverPort);									// Оновлює Сервер при від'єднанні клієнта
+void addConnection(HWND hwnd, const std::string& serverLogin, int serverPort, const std::string& serverKey, const std::string& serverIp); // Додає Сервер
+void removeConnection(HWND hwnd, const std::string& serverLogin, int serverPort); // Знищує Сервер
+void updateConnection(HWND hwnd, int serverPort, const std::string& clientLogin, const std::string& clientIp); // Оновлює Сервер при доєднанні клієнта
+void disconnectClient(HWND hwnd, int serverPort); // Оновлює Сервер при від'єднанні клієнта
 
 
 
