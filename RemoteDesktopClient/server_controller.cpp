@@ -1,21 +1,4 @@
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <fstream>
-#include <sstream>
-#include <cstdio>  // для std::remove і std::rename
-#include <string>
-
-#include <iostream>
-#include <string>
-#include <map>
-#include <curl/curl.h>
-
-#include <windows.h>
-#include <opencv2/opencv.hpp>
-#include <vector>
-#include <unordered_map>
-#include <thread>
-
+#include "libraries.h"
 #include "server_tab.h"
 #include "friends_tab.h"
 #pragma comment(lib, "Gdi32.lib")
@@ -352,7 +335,7 @@ void cleanUnusedPortsAndKeys() {
 }
 
 
-size_t WriteCallbackController(void* contents, size_t size, size_t nmemb, std::string* output) {
+size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* output) {
     size_t totalSize = size * nmemb;
     output->append((char*)contents, totalSize);
     return totalSize;
@@ -368,7 +351,7 @@ bool PostJson(const std::string& url, const std::string& jsonData, std::string& 
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsonData.c_str());
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallbackController);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
 
     CURLcode res = curl_easy_perform(curl);

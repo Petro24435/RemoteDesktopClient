@@ -1,6 +1,6 @@
 
-#include <iostream>
-#include <curl/curl.h>
+
+#include "libraries.h"
 #include "auth.h"
 #include "serverUserRegistration.h"
 // Ініціалізація глобальної змінної

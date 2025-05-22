@@ -1,7 +1,8 @@
+#include "libraries.h"
 #include "profile_tab.h"
 #include "user.h"
 #include "auth.h"
-#include <string>
+
 
 extern UserInfo currentUser;
 HWND hLoginEdit; // Додаємо на початку файлу

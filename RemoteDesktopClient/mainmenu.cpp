@@ -1,6 +1,6 @@
+#include "libraries.h"
 #include "mainmenu.h"
 #include "user.h"
-#include <commctrl.h>
 #include "profile_tab.h"
 #include "friends_tab.h"
 #include "client_tab.h"
@@ -8,7 +8,6 @@
 
 #pragma comment(lib, "comctl32.lib")
 
-#include <windows.h>
 HWND hTab;
 HWND hTabPages[4]; // 4 вкладки
 

@@ -1,20 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 
-#include <vector>
-#include <string>
-#include <unordered_map>
-#include <unordered_set>
-#include <thread>
-#include <atomic>
-#include <chrono>
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <cctype>
-#include <opencv2/opencv.hpp>
-#include <algorithm>
-#include <cmath>
-#include <atomic>
+
+#include "libraries.h"
 #include "serverUserRegistration.h"
 #include "client_tab.h"
 #include "user.h"
@@ -320,7 +307,7 @@ void connectToServer(const std::string& serverIp, int serverPort) {
             }
 
             // Масштабування зі збереженням пропорцій
-            float scale = min(
+            float scale = std::min(
                 (float)screenWidth / img.cols,
                 (float)screenHeight / img.rows
             );

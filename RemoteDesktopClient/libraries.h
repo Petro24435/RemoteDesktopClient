@@ -1,0 +1,93 @@
+//#pragma once
+//
+//#include <winsock2.h>
+//#include <ws2tcpip.h>
+//#include <windows.h>
+//#include <string>
+//#include <iostream>
+//#include <curl/curl.h>
+//#include <fstream>
+//#include <sstream>
+//#include <vector>
+//#include <string>
+//#include <fstream>
+//#include <string>
+//#include <vector>
+//#include <ctime>
+//#include <iomanip>
+//#include <sstream>
+//#include <vector>
+//#include <string>
+//#include <unordered_map>
+//#include <unordered_set>
+//#include <thread>
+//#include <atomic>
+//#include <chrono>
+//#include <fstream>
+//#include <sstream>
+//#include <string>
+//#include <cctype>
+//#include <opencv2/opencv.hpp>
+//#include <algorithm>
+//#include <cmath>
+//#include <atomic>
+//#include <commctrl.h>
+//#include <winsock2.h>
+//#include <ws2tcpip.h>
+//#include <fstream>
+//#include <sstream>
+//#include <cstdio>  // для std::remove і std::rename
+//#include <string>
+//
+//#include <iostream>
+//#include <string>
+//#include <map>
+//#include <curl/curl.h>
+//
+//#include <windows.h>
+//#include <opencv2/opencv.hpp>
+//#include <vector>
+//#include <unordered_map>
+//#include <thread>
+//
+//#include <string>
+//#include <set>
+//#include <vector>
+//#include <fstream>
+//#include <sstream>
+//#include <ctime>
+//#include <cstdlib>
+//#include <string>
+//#include <sstream>
+//#include <iomanip>
+//#include <cctype>
+//#include <cstdio>
+#pragma once
+
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+#include <commctrl.h>
+
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <vector>
+#include <map>
+#include <set>
+#include <unordered_map>
+#include <unordered_set>
+#include <thread>
+#include <atomic>
+#include <chrono>
+#include <ctime>
+#include <cstdlib>
+#include <iomanip>
+#include <cctype>
+#include <cstdio>
+#include <cmath>
+#include <algorithm>
+
+#include <curl/curl.h>
+#include <opencv2/opencv.hpp>

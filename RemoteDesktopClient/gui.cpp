@@ -1,8 +1,6 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <windows.h>
-#include <string>
+
+#include "libraries.h"
 #include "auth.h"
 #include "user.h"
 #include "main.h"
@@ -186,7 +184,7 @@ LRESULT CALLBACK WndProcLogin(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             sx(80), sy(UI_HEIGHT_LINE), TRUE);
 
         if (hFont) DeleteObject(hFont);
-        int fontSize = min(sx(16), sy(16));
+        int fontSize = std::min(sx(16), sy(16));
         hFont = CreateFont(fontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
             DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
             DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");

@@ -1,9 +1,6 @@
+#include "libraries.h"
 #include "auth.h"
 #include "mainmenu.h"
-#include <windows.h>
-#include <string>
-#include <iostream>
-#include <sstream>
 #include "serverUserRegistration.h"
 extern HINSTANCE hInst = NULL;
 Auth auth; // Додаємо змінну для перевірки статусу логіну

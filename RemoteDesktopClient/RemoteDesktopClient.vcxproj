@@ -137,15 +137,12 @@
   <ItemGroup>
     <ClCompile Include="auth.cpp" />
     <ClCompile Include="change_pass.cpp" />
-    <ClCompile Include="client_controller.cpp" />
     <ClCompile Include="client_tab.cpp" />
     <ClCompile Include="friends_tab.cpp" />
     <ClCompile Include="gui.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="mainmenu.cpp" />
     <ClCompile Include="profile_tab.cpp" />
-    <ClCompile Include="RemoteDesktopClient.cpp" />
-    <ClCompile Include="serverUserRegistration.cpp" />
     <ClCompile Include="server_controller.cpp" />
     <ClCompile Include="server_tab.cpp" />
     <ClCompile Include="sqlite3.c" />
@@ -155,6 +152,7 @@
     <ClInclude Include="auth.h" />
     <ClInclude Include="client_tab.h" />
     <ClInclude Include="friends_tab.h" />
+    <ClInclude Include="libraries.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="mainmenu.h" />
     <ClInclude Include="profile_tab.h" />

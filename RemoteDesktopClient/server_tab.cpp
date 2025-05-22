@@ -1,15 +1,4 @@
-#include <string>
-#include <set>
-#include <vector>
-#include <fstream>
-#include <sstream>
-#include <ctime>
-#include <cstdlib>
-#include <string>
-#include <sstream>
-#include <iomanip>
-#include <cctype>
-#include <cstdio>
+#include "libraries.h"
 #include "server_tab.h"
 #include "serverUserRegistration.h"
 
@@ -154,7 +143,7 @@ LRESULT CALLBACK ConnectManagingTabWndProc(HWND hwnd, UINT msg, WPARAM wParam, L
         MoveWindow(hLogEdit, sx(20), sy(100), sx(550), sy(250), TRUE);
 
         if (hServerFont) DeleteObject(hServerFont);
-        int fontSize = min(sx(16), sy(16));
+        int fontSize = std::min(sx(16), sy(16));
         hServerFont = CreateFont(fontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
             DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
             DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
@@ -279,7 +268,7 @@ LRESULT CALLBACK OpenConnectTabWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
         MoveWindow(hStatusIcon, sx(527), sy(3), 30, 30, TRUE);
 
         if (hServerFont2) DeleteObject(hServerFont2);
-        int fontSize = min(sx(16), sy(16));
+        int fontSize = std::min(sx(16), sy(16));
         hServerFont2 = CreateFont(fontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
             DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
             DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");

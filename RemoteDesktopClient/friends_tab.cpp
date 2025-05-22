@@ -1,15 +1,5 @@
+#include "libraries.h"
 #include "friends_tab.h"
-#include <windows.h>
-#include <fstream>
-#include <sstream>
-#include <vector>
-#include <string>
-#include <fstream>
-#include <string>
-#include <vector>
-#include <ctime>
-#include <iomanip>
-#include <sstream>
 
 std::vector<FriendInfo> friendsList;
 
