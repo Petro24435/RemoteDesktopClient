@@ -8,10 +8,10 @@
 
 // Структура конфігурації
 struct ServerConfig {
-    std::string server_ip = "25.5.78.246";
-        //"25.5.78.246"; 
-        //"192.168.0.200";
-        //"172.20.10.5";   // IP сервера
+    std::string server_ip = "192.168.0.200";
+        //"25.5.78.246"; - hamachi
+        //"192.168.0.200"; - home
+        //"172.20.10.5"; - mobile  // IP сервера
     int port = 8000;                        // Порт сервера
 
     std::string GetBaseUrl() const {
