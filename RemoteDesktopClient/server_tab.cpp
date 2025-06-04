@@ -388,9 +388,6 @@ void FillKey(HWND hwnd)
 {
     std::string key = generateKey(currentUser.ip, currentUser.login, port);
     std::wstring wkey(key.begin(), key.end());
-    //std::wstring wport = std::to_wstring(port);
-    //MessageBox(hwnd, wkey.c_str(), L"Згенерований ключ", MB_OK | MB_ICONINFORMATION);
-    //MessageBox(hwnd, wport.c_str(), L"Port", MB_OK | MB_ICONINFORMATION);
     SetWindowText(hKeyEdit, wkey.c_str());
 }
 

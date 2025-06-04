@@ -3,33 +3,7 @@
 #include "mainmenu.h"
 #include "serverUserRegistration.h"
 extern HINSTANCE hInst = NULL;
-Auth auth; // Додаємо змінну для перевірки статусу логіну
-// Обробка повідомлень для головного вікна
-//LRESULT CALLBACK WndProcLogin(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
-//    switch (msg) {
-//    case WM_CREATE:
-//        CreateWindowEx(0, L"STATIC", L"Welcome to the main menu!", WS_VISIBLE | WS_CHILD,
-//            20, 20, 300, 30, hwnd, NULL, NULL, NULL);
-//        break;
-//
-//    case WM_COMMAND:
-//        switch (LOWORD(wp))
-//        {
-//        case IDC_RADIO_SERVER: // Глядач
-//            
-//            break;
-//
-//        case IDC_RADIO_CLIENT: // Повний доступ
-//            
-//            break;
-//        }
-//    case WM_DESTROY:
-//        PostQuitMessage(0);
-//        break;
-//    }
-//
-//    return DefWindowProc(hwnd, msg, wp, lp);
-//}
+Auth auth; 
 
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow) {
     hInst = hInstance;

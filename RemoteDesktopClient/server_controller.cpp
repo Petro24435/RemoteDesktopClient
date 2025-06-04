@@ -307,10 +307,6 @@ void disconnectClient(HWND hwnd, int serverPort) {
     }
 }
 
-
-
-
-
 void cleanUnusedPortsAndKeys() {
 
     // Отримати всі зайняті порти

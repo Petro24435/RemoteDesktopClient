@@ -8,7 +8,7 @@
 
 // Структура конфігурації
 struct ServerConfig {
-    std::string server_ip = "192.168.0.200";
+    std::string server_ip = "25.5.78.246";
         //"25.5.78.246"; - hamachi
         //"192.168.0.200"; - home
         //"172.20.10.5"; - mobile  // IP сервера
@@ -18,7 +18,7 @@ struct ServerConfig {
         return "http://" + server_ip + ":" + std::to_string(port);
     }
 };
-static bool db = false
+static bool db = true
 ;size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* output);
 
 // Оголошуємо глобальну статичну змінну, яка буде використовуватися для всієї програми
