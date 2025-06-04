@@ -10,8 +10,6 @@
 #define IDC_LABEL_ROLE       1008
 #define IDC_RADIO_SERVER     1009
 #define IDC_RADIO_CLIENT     1010
-#define TEST     1
-#define TESTS     2
 
 
 // Базовий розмір вікна, для масштабування
