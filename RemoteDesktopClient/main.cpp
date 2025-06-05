@@ -64,6 +64,9 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
             << globalConfig.server_ip << " --port " << globalConfig.port << "\"";
         system(ss.str().c_str());
     }
+    //else {
+    //    MessageBox(NULL, L"Error", L"Error Code", MB_OK | MB_ICONERROR);
+    //}
     // Основний цикл обробки повідомлень
     MSG msg;
     while (GetMessage(&msg, hwndLogin, 0, 0)) {

@@ -222,7 +222,14 @@ void addConnection(HWND hwnd, const std::string& serverLogin, int serverPort, co
         logMessage(hwnd, "Некоректні параметри для з'єднання!");
         return;
     }
-
+    std::stringstream command;
+    command << "netsh advfirewall firewall add rule name=\"Allow Remote Port\"" <<
+        " dir=in action=allow protocol=TCP localport=" << serverPort << "\"";
+    int result = system(command.str().c_str());
+    if(result != 0)
+    {
+        MessageBox(hwnd, L"Invalid!", L"Error", MB_OK | MB_ICONERROR);
+    }
     std::string url = globalConfig.GetBaseUrl() + "/add_connection/";
     std::string jsonData =
         "{\"serverLogin\":\"" + serverLogin +
@@ -248,7 +255,8 @@ void removeConnection(HWND hwnd, const std::string& serverLogin, int serverPort)
     std::string jsonData =
         "{\"serverLogin\":\"" + serverLogin +
         "\",\"port\":" + std::to_string(serverPort) + "}";
-
+    const char* command = "netsh advfirewall firewall delete rule name=\"Allow Remote Port\"";
+    system(command);
     std::string response;
     if (!PostJson(url, jsonData, response)) {
         logMessage(hwnd, "Помилка при видаленні з'єднання");
